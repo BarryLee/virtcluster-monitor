@@ -3,5 +3,6 @@
 *.swp
 *.vim
 *.bak*
-server/test/*
+*/test/*
+test_*.py
 

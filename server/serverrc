@@ -1,0 +1,30 @@
+# Configuration file for monitor server
+# 
+
+
+#
+# network configs
+#
+# network interface for internal communication
+local_interface = 'lo'
+# network interface for external access
+public_interface = 'eth0'
+# port number
+port = 20060
+
+
+#
+# RoundRobinDatabase configs
+#
+# root directory for rrd files
+RRD_root = '/tmp/rrds'
+
+
+# the output will be redirected to this file(when demonized)
+ofile = '/tmp/monserver.out'
+
+# the pid file for demonizing
+pfile = '/tmp/monserver.pid'
+
+# log path
+logfile = '/tmp/monserver.log'
