@@ -1,5 +1,6 @@
 
 from ThreadingXMLRPCServer import ThreadingXMLRPCServer, get_request_data
+from models.interface import sign_in_handler
 from utils.load_config import load_config
 from utils.get_logger import get_logger
 from utils.utils import encode, decode, get_ip_address, _print
@@ -10,9 +11,10 @@ logger = get_logger('server')
 
 def sign_in(msg):
     try:
-        model = decode(msg)
+        platform_info = decode(msg)
         client_address = get_request_data().client_address
-        return 1, ''
+        metric_conf = sign_in_handler(client_address, platform_info)
+        return 1, encode(metric_conf)
     except Exception, e:
         logger.exception('')
         return 0, ''

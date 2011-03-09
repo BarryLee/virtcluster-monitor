@@ -70,3 +70,33 @@ def _parseJSON(obj):
     return obj
 
 
+def get_from_dict(dict_, keys):
+    ret = dict_
+    if type(keys) is str:
+        ret = dict_[keys]
+    else:
+        keys = list(keys)
+        for i in keys:
+            ret = ret[i]
+
+    return ret
+
+
+def put_to_dict(dict_, keys, val, createMidNodes=False):
+    if type(keys) is str:
+        dict_[keys] = val
+    else:
+        keys = list(keys)
+        midKeys = keys[0:-1]
+        theKey = keys[-1]
+        sub = dict_
+        for i in midKeys:
+            try:
+                sub = sub[i]
+            except KeyError, e:
+                if createMidNodes:
+                    sub[i] = {}
+                    sub = sub[i]
+                else:
+                    raise
+        sub[theKey] = val
