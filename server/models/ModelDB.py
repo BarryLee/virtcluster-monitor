@@ -3,7 +3,11 @@ import transaction
 from BTrees.OOBTree import OOBTree
 
 from singletonmixin import Singleton
-from utils.utils import put_to_dict
+#from utils.utils import put_to_dict
+
+
+class ModelDBException(Exception):
+    pass
 
 
 class ModelDB(Singleton):
@@ -14,17 +18,13 @@ class ModelDB(Singleton):
         self._opened = 0
         #self.db = ZODB.config.databaseFromURL(dbconfigurl)
         self.open()
-        conn = self._db.open()
-        root = conn.root()
-        if not root.has_key('all'):
-            root['all'] = OOBTree()
-            self.commit()
-        conn.close()
-        print '__init__() called'
-
-
-    def addDevice(self, device_type, device_key, device_obj):
-        pass
+        #conn = self._db.open()
+        #root = conn.root()
+        #if not root.has_key('all'):
+            #root['all'] = OOBTree()
+            #self.commit()
+        #conn.close()
+        #print '__init__() called'
 
 
     def commit(self):
@@ -49,17 +49,29 @@ class ModelDB(Singleton):
         self._opened = 0
 
 
+
 class ModelDBSession(object):
 
     def __init__(self, modeldbobj):
         #self.modeldb = ModelDB.getInstance(dbconfigurl)
         self.modeldb = modeldbobj
         self.connection = self.modeldb.getConnection()
-        self.root = self.connection.root().get('all')
+        #self.root = self.connection.root().get('all')
+        self.root = self.connection.root()
         
 
-    def putToDB(self, keys, val):
-        put_to_dict(self.root, keys, val, True)
+    def addResource(self, res_type, res_key, obj):
+        if not self.root.has_key(res_type):
+            self.root[res_type] = OOBTree()
+
+        self.root[res_type][res_key] = obj
+
+
+    def removeResource(self, res_type, res_key):
+        try:
+            self.root[res_type].pop(res_key)
+        except KeyError, e:
+            raise ModelDBException
 
 
     def commit(self):
@@ -70,8 +82,5 @@ class ModelDBSession(object):
         self.connection.close()
         self.root = None
 
-
-    #def __del__(self):
-        #self.close()
 
 

@@ -2,14 +2,13 @@
 
 import os.path
 
-from utils import parent_dir
+#from utils import parent_dir
 
-DEFAULT_CONFIG = parent_dir(__file__) + os.path.sep + 'serverrc'
+#DEFAULT_CONFIG = parent_dir(__file__) + os.path.sep + 'serverrc'
 
-#print DEFAULT_CONFIG
 
-def load_config():
-    exec(compile(open(DEFAULT_CONFIG).read(), DEFAULT_CONFIG, 'exec'))
+def load_config(confpath):
+    exec(compile(open(confpath).read(), confpath, 'exec'))
     return locals()
 
 if __name__ == '__main__':
