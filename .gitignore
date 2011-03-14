@@ -3,7 +3,4 @@
 *.swp
 *.vim
 *.bak*
-*/test/*
-*/*/test/*
-test_*.py
 
