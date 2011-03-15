@@ -1,11 +1,14 @@
 import os.path
 import sys
 
+###############################################################
+# temporary solution for importing upper level modules/packages
 _ = lambda f: os.path.dirname(os.path.abspath(f))
 
 par_dir = _(_(__file__))
 if par_dir not in sys.path:
     sys.path.append(par_dir)
+###############################################################
 
 from ModelDB import ModelDB, ModelDBSession
 from resources import Host, VirtualHost, CPU, Disk, Partition, NetworkInterface
@@ -75,7 +78,7 @@ def sign_in_handler(ip, info):
 
     global modeldb
     session = modeldb.openSession()
-    session.addResource(host.__class__.__name__, host.id, host)
+    session.setResource(host.__class__.__name__, host.id, host)
     session.commit()
     session.close()
     
@@ -84,10 +87,7 @@ def sign_in_handler(ip, info):
     return metric_list
 
 
-def metric_list_gen(host_obj):
-    if not host_obj.use_default_metrics:
-        return host_obj.metric_list
-
+def default_metric_list():
     metric_config = load_config(METRIC_CONFIG_PATH)
 
     if host_obj.virt_type is None:
@@ -101,7 +101,14 @@ def metric_list_gen(host_obj):
         metric_list_path = metric_config['default_path'][virt_type + 
                                                          '_' + host_type]
 
-    metric_list = decode(open(cur_dir + os.path.sep + metric_list_path).read())
+    return decode(open(cur_dir + os.path.sep + metric_list_path).read())
+
+
+def metric_list_gen(host_obj):
+    if not host_obj.use_default_metrics:
+        return host_obj.metric_list
+
+    metric_list = default_metric_list()
 
     metric_groups = [] 
     for metric_group in iter(metric_list['metric_groups']):
@@ -135,4 +142,15 @@ def metric_list_gen(host_obj):
     return {"metric_groups" : metric_groups}
 
 
+def host_metric_conf(host_id):
+    global modeldb
+    session = modeldb.openSession()
+    
+    host_obj = session.getResource(host.__class__.__name__, host_id)
+
+    if not host_obj.use_default_metrics:
+        return host_obj.metric_list
+    else:
+        return default_metric_list()
+    
 

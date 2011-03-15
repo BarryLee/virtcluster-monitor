@@ -60,18 +60,25 @@ class ModelDBSession(object):
         self.root = self.connection.root()
         
 
-    def addResource(self, res_type, res_key, obj):
+    def setResource(self, res_type, res_key, obj):
         if not self.root.has_key(res_type):
             self.root[res_type] = OOBTree()
 
         self.root[res_type][res_key] = obj
 
 
-    def removeResource(self, res_type, res_key):
+    def getResource(self, res_type, res_key):
+        try:
+            return self.root[res_type][res_key]
+        except KeyError, e:
+            raise ModelDBException, 'get resource %s failed' % e.args[0]
+
+
+    def unsetResource(self, res_type, res_key):
         try:
             self.root[res_type].pop(res_key)
         except KeyError, e:
-            raise ModelDBException
+            raise ModelDBException, 'unset resource %s failed' % e.args[0]
 
 
     def commit(self):
