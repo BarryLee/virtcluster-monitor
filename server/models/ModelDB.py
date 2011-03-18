@@ -71,7 +71,8 @@ class ModelDBSession(object):
         try:
             return self.root[res_type][res_key]
         except KeyError, e:
-            raise ModelDBException, 'get resource %s failed' % e.args[0]
+            return None
+            #raise ModelDBException, 'get resource %s failed' % e.args[0]
 
 
     def unsetResource(self, res_type, res_key):

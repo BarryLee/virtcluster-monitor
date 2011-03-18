@@ -20,11 +20,12 @@ def sign_in(msg):
     try:
         platform_info = decode(msg)
         client_ip = get_request_data().client_address[0]
-        metric_list = sign_in_handler(client_ip, platform_info)
-        return 1, encode(metric_list)
+        #metric_list = sign_in_handler(client_ip, platform_info)
+        sign_in_handler(client_ip, platform_info)
+        return 1
     except Exception, e:
         logger.exception('')
-        return 0, ''
+        return 0
 
 
 def main():

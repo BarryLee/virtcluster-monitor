@@ -32,7 +32,19 @@ def sign_in_handler(ip, info):
     is_virtual = info.get('virtual')
     virt_type = info.get('virt_type')
 
-    host = Host(ip)
+    if not is_virtual:
+        id = ID.host_id_gen(ip)
+        host_type = 'Host'
+
+    global modeldb
+    session = modeldb.openSession()
+    host = session.getResource(host_type, id)
+    if host is None:
+        host = Host(ip)
+        host.id = id
+    else:
+        logger.debug('retieve object %s from db' % host)
+
     host.is_virtual = is_virtual
     host.virt_type = virt_type
 
@@ -69,77 +81,15 @@ def sign_in_handler(ip, info):
             network_interface.update({'name': ifn})
             host.addOne('network_interfaces', ifn, network_interface)
 
-    if not is_virtual:
-        host.id = ID.host_id_gen(ip)
         #if virt_type is not None:
         #host.virt_type = virt_type
 
-    host.use_default_metrics = True
+    host.metric_list = info['metric_groups']
 
-    global modeldb
-    session = modeldb.openSession()
     session.setResource(host.__class__.__name__, host.id, host)
+    session.setResource('active', host.ip, host)
     session.commit()
     session.close()
-    
-    metric_list = metric_list_gen(host)
-    
-    return metric_list
-
-
-def default_metric_list():
-    metric_config = load_config(METRIC_CONFIG_PATH)
-
-    if host_obj.virt_type is None:
-        metric_list_path = metric_config['default_path']['normal']
-    else:
-        virt_type = host_obj.virt_type
-        if not host_obj.is_virtual:
-            host_type = 'host'
-        else:
-            host_type = 'guest'
-        metric_list_path = metric_config['default_path'][virt_type + 
-                                                         '_' + host_type]
-
-    return decode(open(cur_dir + os.path.sep + metric_list_path).read())
-
-
-def metric_list_gen(host_obj):
-    if not host_obj.use_default_metrics:
-        return host_obj.metric_list
-
-    metric_list = default_metric_list()
-
-    metric_groups = [] 
-    for metric_group in iter(metric_list['metric_groups']):
-        this_group = {}
-        this_group['name'] = metric_group['name']
-        this_group['period'] = metric_group['period']
-        this_group['metrics'] = metric_group['metrics']
-        #for metrics in metric_group:
-            #for metric in metrics:
-                #if metric['enabled']:
-                    #this_group['metrics'].append({'name': metric['name']})
-        if this_group['name'] == 'DiskModule':
-            devices = []
-            for disk in host_obj.disks.values():
-                devices.append(disk.name)
-                if metric_config['enable_partitions']:
-                    if hasattr(disk, 'partitions'):
-                        for partition in disk.partitions:
-                            devices.append(partition.name)
-            for device in devices:
-                #logger.debug(this_group)
-                dup_group = {'args': {'device': device}}
-                dup_group.update(this_group)
-                #logger.debug(dup_group)
-                metric_groups.append(dup_group)
-                #logger.debug(metric_groups)
-        else:
-            metric_groups.append(this_group)
-            #logger.debug(metric_groups)
-
-    return {"metric_groups" : metric_groups}
 
 
 def host_metric_conf(host_id):
@@ -147,10 +97,18 @@ def host_metric_conf(host_id):
     session = modeldb.openSession()
     
     host_obj = session.getResource(host.__class__.__name__, host_id)
-
-    if not host_obj.use_default_metrics:
-        return host_obj.metric_list
-    else:
-        return default_metric_list()
+    assert host_obj is not None
+    session.close()
     
+    return host_obj.metric_list
+    
+
+def getidbyip(ip):
+    global modeldb
+    session = modeldb.openSession()
+
+    host_obj = session.getResource('active', ip)
+    session.close()
+    return host_obj.id
+
 
