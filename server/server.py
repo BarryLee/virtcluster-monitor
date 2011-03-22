@@ -1,12 +1,17 @@
 
 import os.path
 import sys
+import threading
+
+from time import sleep
 
 from ThreadingXMLRPCServer import ThreadingXMLRPCServer, get_request_data
-from models.interface import sign_in_handler
+from PerfDataReciever import DataReciever
+from RRD.RRDHandler import RRDHandler
+from models.Interface import sign_in_handler
 from utils.load_config import load_config
 from utils.get_logger import get_logger
-from utils.utils import encode, decode, get_ip_address, _print
+from utils.utils import encode, decode, get_ip_address, threadinglize, _print
 
 
 _ = lambda f: os.path.dirname(os.path.abspath(f))
@@ -32,11 +37,22 @@ def main():
     config = load_config(SERVER_CONFIG_PATH)
 
     local_host = get_ip_address(config.get('local_interface')) 
-    local_port = config.get('port')
-    
-    server = ThreadingXMLRPCServer((local_host, local_port),)
-    server.register_function(sign_in)
-    server.serve_forever()
+
+    rpc_port = config.get('rpc_port')
+    rpc_server = ThreadingXMLRPCServer((local_host, rpc_port),)
+    rpc_server.register_function(sign_in)
+    #server.serve_forever()
+    threadinglize(rpc_server.serve_forever, 'rpc_server')()
+
+    rrd_root = config.get('RRD_root', '/tmp')    
+    rrd_handler = RRDHandler.getInstance(rrd_root)
+    ds_port = config.get('ds_port')
+    data_server = DataReciever((local_host, ds_port), rrd_handler)
+    threadinglize(data_server.serve_forever, 'data_server')()
+
+    while True:
+        _print(threading.enumerate())
+        sleep(60)
 
 
 if __name__ == '__main__':

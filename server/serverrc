@@ -9,8 +9,10 @@
 local_interface = 'lo'
 # network interface for external access
 public_interface = 'eth0'
-# port number
-port = 20060
+# rpc server port number
+rpc_port = 20060
+# data server port number
+ds_port = 20060
 
 
 #

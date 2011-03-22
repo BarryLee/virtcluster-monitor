@@ -4,8 +4,10 @@ data
 from SocketServer import BaseRequestHandler, ThreadingUDPServer
 import time
 
-from models.interface import getidbyip 
+#from models.interface import getidbyip 
+from models.Interface import Interface
 from utils.get_logger import get_logger
+from utils.utils import decode
 
 
 logger = get_logger('PerfDateReciever')
@@ -15,6 +17,7 @@ class DRRequestHandler(BaseRequestHandler):
 
     def __init__(self, request, client_address, server, data_store_handler):
         self.data_store_handler = data_store_handler
+        self.model_int = Interface()
         BaseRequestHandler.__init__(self, request, client_address, server)
 
 
@@ -25,7 +28,13 @@ class DRRequestHandler(BaseRequestHandler):
         ip = self.client_address[0]
         try:
             # convert the host addr to its id
-            host_id = getidbyip(ip)
+            host_obj = self.model_int.getActiveHost(ip)
+            #host_id = getidbyip(ip)
+            host_id = host_obj.id
+            host_obj.last_arrival = time.time()
+            self.model_int.close()
+            #self.data_store_handler.onDataArrival(host_obj, decode(data))
+            self.data_store_handler.onDataArrival(host_id, decode(data))
         except KeyError, e:
             # TODO 
             #logger.debug('recieved msg from unsigned host %s' % \
@@ -33,7 +42,7 @@ class DRRequestHandler(BaseRequestHandler):
             return
         #logger.debug('msg from %s:%d - %s' % (data[1][0], data[1][1], data[0])) 
         #set_session(ip, last_send=time.time())
-        self.passOn(host_id, data)
+        #self.passOn(host_id, data)
 
 
     def passOn(self, host, data):
@@ -51,10 +60,11 @@ class DRRequestHandler(BaseRequestHandler):
 
 class DataReciever(ThreadingUDPServer):
 
-    def __init__(self, server_address, \
-                 RequestHandlerClass=DRRequestHandler,\
+    def __init__(self, server_address, data_store_handler, 
+                 RequestHandlerClass=DRRequestHandler,
                  bind_and_activate=True):
-        UDPServer.__init__(self, server_address, RequestHandlerClass)
+        ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
+        self.data_store_handler = data_store_handler
 
 
     def verify_request(self, request, client_address):
@@ -63,6 +73,6 @@ class DataReciever(ThreadingUDPServer):
 
 
     def finish_request(self, request, client_address):
-        self.RequestHandlerClass(request, client_address, self)
+        self.RequestHandlerClass(request, client_address, self, self.data_store_handler)
 
 

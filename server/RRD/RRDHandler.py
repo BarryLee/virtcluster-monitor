@@ -14,7 +14,7 @@ if par_dir not in sys.path:
 from includes.singletonmixin import Singleton, SingletonException
 from rrdtool_wrapper import *
 from utils.get_logger import get_logger
-from models.interface import host_metric_conf
+from models.Interface import host_metric_conf
 
 
 logger = get_logger('RRD.RRDHandler')
@@ -28,17 +28,19 @@ class RRDHandler(Singleton):
 
     _lock = threading.RLock()
 
-    def __init__(self, root_dir):
-        self._root_dir = str(root_dir)
+    def __init__(self, root_dir, buffer_size=0):
+        assert type(root_dir) is str
+        assert type(buffer_size) is int
+        self._root_dir = root_dir
         self._temp = {}
 
 
-    def suffix(self, metric_name):
-        return metric_name + '.rrd'
+    def suffix(self, prefix, metric_name):
+        return prefix + '_' + metric_name + '.rrd'
 
 
-    def pathScheme(self, host_id, metric_name):
-        return os.sep.join([self._root_dir, host_id]), self.suffix(metric_name)
+    def pathScheme(self, host_id, prefix, metric_name):
+        return os.sep.join([self._root_dir, host_id]), self.suffix(prefix, metric_name)
 
 
     def cd(self, path):
@@ -52,38 +54,67 @@ class RRDHandler(Singleton):
                 raise e
 
 
-    def write(self, host_id, metric_name, val):
-        #print "writing to db...%s:%s:%s" % (host_id, metric_name, val)
-
-        dir_path, rrd_db = self.pathScheme(host_id, metric_name)
-        self._lock.acquire()
-        if not os.path.exists(dir_path):
+    #def onDataArrival(self, host_obj, data):
+    def onDataArrival(self, host_id, data):
+        #host_id = host_obj.id
+        prefix = data.has_key('prefix') and data['prefix'] or ''
+        timestamp = data['timestamp']
+        #metric_conf = host_obj.metric_list
+        for metric_name, metric_val in data['val'].items():
+            dir, rrd = self.pathScheme(host_id, prefix, metric_name)
+            rrd = dir + os.path.sep + rrd
             try:
-                os.makedirs(dir_path)
-            except OSError, e:
-                #if e.errno != 17:  # if not because file already exists
-                raise e
-        self._lock.release()
+                rrdtool.update(rrd, "%d:%s"%(timestamp,metric_val))
+            except rrdtool.error, e:
+                if 'No such file' in e.args[0]:
+                    self._lock.acquire()
+                    if not os.path.exists(dir):
+                        try:
+                            os.makedirs(dir)
+                        except OSError, e:
+                            #if e.errno != 17:  # if not because file already exists
+                            raise e
+                    self._lock.release()
+                    
+                    self.create(host_id, prefix, metric_name, rrd)
+                else:
+                    logger.exception('%s, %s, %s' % 
+                                     (host_id, metric_name, metric_val))
+                    raise RRDHandlerException, str(e)
 
-        #rrd_db = dir_path + os.sep + rrd_db
-        self.cd(dir_path)
-        try:
-            if not os.path.exists(rrd_db):
-                self.rrdCreate(host_id, metric_name, rrd_db)
         
-            ret = self.rrdGroupUpdata(rrd_db, val)
+    #def write(self, host_id, metric_name, val):
+        ##print "writing to db...%s:%s:%s" % (host_id, metric_name, val)
 
-        except rrdtool.error, e:
-            logger.exception('%s, %s, %s' % (host_id, metric_name, val))
-            raise RRDHandlerException, str(e)
+        #dir_path, rrd_db = self.pathScheme(host_id, metric_name)
+        #self._lock.acquire()
+        #if not os.path.exists(dir_path):
+            #try:
+                #os.makedirs(dir_path)
+            #except OSError, e:
+                ##if e.errno != 17:  # if not because file already exists
+                #raise e
+        #self._lock.release()
+
+        ##rrd_db = dir_path + os.sep + rrd_db
+        #self.cd(dir_path)
+        #try:
+            #if not os.path.exists(rrd_db):
+                #self.create(host_id, metric_name, rrd_db)
+        
+            #ret = self.rrdGroupUpdata(rrd_db, val)
+
+        #except rrdtool.error, e:
+            #logger.exception('%s, %s, %s' % (host_id, metric_name, val))
+            #raise RRDHandlerException, str(e)
 
 
     def read(self, host_id, metric_name, cf='AVERAGE', resolution=5, start=None, end=None):
         # Read monitor data
-        # The most recent data will be retrived if there is 
-        # no time specified
+        # The most recent data will be retrived if neither start
+        # nor end is given
         resolution = int(resolution)
-        host_rrd_dir, rrd_db = self.pathScheme(host_id, metric_name)
+        host_rrd_dir, rrd_db = self.pathScheme(host_id, '', metric_name)
         if not os.path.exists(host_rrd_dir):
             logger.error('cannot find data of host %s' % host_id)
             raise RRDHandlerException, 'host %s is not monitored' % host_id
@@ -103,7 +134,7 @@ class RRDHandler(Singleton):
         return ret
 
 
-    def getMetricConf(self, host_id):
+    def _getMetricConf(self, host_id):
         try:
             return self._temp[host_id]
         except KeyError, e:
@@ -112,13 +143,38 @@ class RRDHandler(Singleton):
             return metric_conf
 
 
-    def rrdCreate(self, host_id, metric_name, rrd_db):
-        metric_conf = self.getMetricConf(host_id)
+    def _getMetricMetricgrp(self, prefix, metric_name, metric_conf):
+        found = None
+        #metric_groups = metric_conf['metric_groups']
+        metric_groups = metric_conf
+        for metric_group in metric_groups:
+            if prefix != '':
+                if not (metric_group.has_key('instances') and 
+                        reduce(lambda x,y: x+y,
+                               (i['device']==prefix \
+                                for i in metric_group['instances']))):
+                    continue
+            for metric in metric_group['metrics']:
+                if metric['name'] == metric_name:
+                    found = (metric_group, metric)
+                    break
 
-        found = self.getMetricMetricgrp(metric_name, metric_conf)
+        return found
+
+
+    #def create(self, host_id, metric_name, rrd_db):
+    def create(self, host_id, prefix, metric_name, rrd_db):
+        metric_conf = self._getMetricConf(host_id)
+
+        #found = self._getMetricMetricgrp(metric_name, metric_conf)
+        found = self._getMetricMetricgrp(prefix, metric_name, metric_conf)
 
         if found is None:
-            raise RRDHandlerException, "metric %s not found" % name
+            errmsg = "metric %s" % metric_name
+            if prefix != "":
+                errmsg += " of %s" % prefix
+            errmsg += " not found"
+            raise RRDHandlerException, errmsg
         else:
             metric_group = found[0]
             metric = found[1]
@@ -134,7 +190,7 @@ class RRDHandler(Singleton):
             xff = 0.5
             ttl = 3600 * 24
             cf_time = metric_group['consolidation_intervals']
-            DSs = [[name, ds_type, heartbeat, min, max]]
+            DSs = [[metric_name, ds_type, heartbeat, min, max]]
             RRAs = []
             RRAs.append(['AVERAGE', xff, 1, ttl/step])
             for cf in ('AVERAGE', 'MIN', 'MAX'):
@@ -144,29 +200,17 @@ class RRDHandler(Singleton):
             rrdcreate_wrapper(rrd_db, start=-24*3600, step=step, DSs=DSs, RRAs=RRAs)
 
 
-    def rrdGroupUpdata(self, rrd_db, vals):
-        if type(vals) is list:
-            for val in vals:
-                timestamp = int(val[0])
-                val = str(val[1])
-                rrdupdate_wrapper(rrd_db, timestamp, val)
-        else:
-            timestamp = int(val[0])
-            val = str(val[1])
-            rrdupdate_wrapper(rrd_db, timestamp, val)
-        return ret
-
-
-    def getMetricMetricgrp(self, metric_name, metric_conf):
-        found = None
-        metric_groups = metric_conf['metric_groups']
-        for metric_group in metric_groups:
-            for metric in metric_group['metrics']:
-                if metric['name'] == name:
-                    found = (metric_group, metric)
-                    break
-
-        return found
+    #def rrdGroupUpdata(self, rrd_db, vals):
+        #if type(vals) is list:
+            #for val in vals:
+                #timestamp = int(val[0])
+                #val = str(val[1])
+                #rrdupdate_wrapper(rrd_db, timestamp, val)
+        #else:
+            #timestamp = int(val[0])
+            #val = str(val[1])
+            #rrdupdate_wrapper(rrd_db, timestamp, val)
+        #return ret
 
 
 def getInstance(rrdRoot):

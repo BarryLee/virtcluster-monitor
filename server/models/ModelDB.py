@@ -41,6 +41,11 @@ class ModelDB(Singleton):
 
     def open(self):
         self._db = ZODB.config.databaseFromURL(self._config_url)
+        conn = self._db.open()
+        root = conn.root()
+        if not root.has_key('all'):
+            root['all'] = OOBTree()
+            self.commit()
         self._opened = 1
 
 

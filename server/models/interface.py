@@ -112,3 +112,5 @@ def getidbyip(ip):
     return host_obj.id
 
 
+def setLastArrival(host_id):
+    pass

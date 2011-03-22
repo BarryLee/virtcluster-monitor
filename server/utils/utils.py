@@ -4,6 +4,7 @@ import sys
 import socket
 import fcntl
 import struct
+import threading
 
 
 current_dir = lambda f: os.path.dirname(os.path.abspath(f))
@@ -100,3 +101,16 @@ def put_to_dict(dict_, keys, val, createMidNodes=False):
                 else:
                     raise
         sub[theKey] = val
+
+
+def threadinglize(target_, tName=None, isDaemon_=True):
+    def func_(*args_, **kwargs_):
+        t = threading.Thread(target=target_, args=args_, kwargs=kwargs_)
+        if isDaemon_:
+            t.setDaemon(True)
+        if tName:
+            t.setName(tName)
+        else:
+            t.setName(target_.__name__)
+        t.start()
+    return func_
