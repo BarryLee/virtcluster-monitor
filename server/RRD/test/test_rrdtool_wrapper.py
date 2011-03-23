@@ -56,6 +56,9 @@ class test_rrdtool_wrapper(unittest.TestCase):
 
                 
     def _test_rrdupdate(self):
+        #start = time.time() - 120
+        #for i in range(120):
+            #rrdtool.update(self.rrd1, "%d:%s" % ((start + i), i))
         start = time.time() - 600 + 15
         for i in range(600/15):
             rrdtool.update(self.rrd1, "%d:%s" % ((start + i*15), i))
@@ -65,8 +68,8 @@ class test_rrdtool_wrapper(unittest.TestCase):
         self._test_rrdupdate()
         rrd_file = self.rrd1
         cf = 'AVERAGE'
-        step = 15
-        start = -60
+        step = 60
+        start = -240
         end = int(time.time())
         os.system('rrdtool fetch %s %s -r %d -s %d -e %d' % \
                   (rrd_file, cf, step, start, end))
