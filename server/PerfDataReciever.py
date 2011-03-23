@@ -27,13 +27,11 @@ class DRRequestHandler(BaseRequestHandler):
         data = self.request[0]
         ip = self.client_address[0]
         try:
-            # convert the host addr to its id
+            #logger.debug(list(self.model_int.session.root.get("active", {}).keys()))
             host_obj = self.model_int.getActiveHost(ip)
-            #host_id = getidbyip(ip)
             host_id = host_obj.id
             host_obj.last_arrival = time.time()
             self.model_int.close()
-            #self.data_store_handler.onDataArrival(host_obj, decode(data))
             self.data_store_handler.onDataArrival(host_id, decode(data))
         except KeyError, e:
             # TODO 

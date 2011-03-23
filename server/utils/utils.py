@@ -5,16 +5,20 @@ import socket
 import fcntl
 import struct
 import threading
+import time
 
+
+__all__ = ["get_ip_address", "decode", "encode", "get_from_dict", 
+           "put_to_dict", "threadinglize", "scheduled_task", "myprint"]
 
 current_dir = lambda f: os.path.dirname(os.path.abspath(f))
 
 parent_dir = lambda f: os.path.dirname(current_dir(f))
 
-if sys.version[:3] >= '2.6':
+if sys.version[:3] >= "2.6":
     import json
 else:
-    # Because of simplejson's intra-package import statements, the path
+    # Because of simplejson"s intra-package import statements, the path
     # of simplejson has to be temporarily add to system path, otherwise 
     # we will get ImportError when import from the upper level.
     cur_dir = current_dir(__file__)
@@ -25,7 +29,7 @@ else:
 
 import pprint
 pp = pprint.PrettyPrinter(indent=2)
-def _print(msg):
+def myprint(msg):
     pp.pprint(msg)
 
 
@@ -34,7 +38,7 @@ def get_ip_address(ifname):
     return socket.inet_ntoa(fcntl.ioctl(
         s.fileno(),
         0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname[:15])
+        struct.pack("256s", ifname[:15])
     )[20:24])
 
 
@@ -114,3 +118,29 @@ def threadinglize(target_, tName=None, isDaemon_=True):
             t.setName(target_.__name__)
         t.start()
     return func_
+
+
+def scheduled_task(procedure, tname=None, isdaemon=True, 
+                   schedule_delay=0, loop_time=0, loop_interval=0):
+    def schedule(*args_, **kwargs_):
+        def do_task(*args, **kwargs):
+            loop_counter = loop_time
+            while loop_time == -1 or loop_counter >= 0:
+                procedure(*args_, **kwargs_)
+                loop_counter -= 1
+                if loop_interval > 0:
+                    time.sleep(loop_interval)
+
+        if schedule_delay > 0:
+            t = threading.Timer(schedule_delay, do_task, args_, kwargs_)
+        else:
+            t = threading.Thread(target=do_task, args=args_, kwargs=kwargs_)
+        t.daemon = isdaemon
+        if tname:
+            t.name = tname
+        else:
+            t.name = procedure.__name__
+        t.start()
+    return schedule
+
+ 

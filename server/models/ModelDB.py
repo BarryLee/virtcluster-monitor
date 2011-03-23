@@ -2,7 +2,7 @@ import ZODB.config
 import transaction
 from BTrees.OOBTree import OOBTree
 
-from singletonmixin import Singleton
+from server.includes.singletonmixin import Singleton
 #from utils.utils import put_to_dict
 
 
@@ -20,11 +20,11 @@ class ModelDB(Singleton):
         self.open()
         #conn = self._db.open()
         #root = conn.root()
-        #if not root.has_key('all'):
-            #root['all'] = OOBTree()
+        #if not root.has_key("all"):
+            #root["all"] = OOBTree()
             #self.commit()
         #conn.close()
-        #print '__init__() called'
+        #print "__init__() called"
 
 
     def commit(self):
@@ -43,8 +43,8 @@ class ModelDB(Singleton):
         self._db = ZODB.config.databaseFromURL(self._config_url)
         conn = self._db.open()
         root = conn.root()
-        if not root.has_key('all'):
-            root['all'] = OOBTree()
+        if not root.has_key("all"):
+            root["all"] = OOBTree()
             self.commit()
         self._opened = 1
 
@@ -61,7 +61,7 @@ class ModelDBSession(object):
         #self.modeldb = ModelDB.getInstance(dbconfigurl)
         self.modeldb = modeldbobj
         self.connection = self.modeldb.getConnection()
-        #self.root = self.connection.root().get('all')
+        #self.root = self.connection.root().get("all")
         self.root = self.connection.root()
         
 
@@ -70,6 +70,7 @@ class ModelDBSession(object):
             self.root[res_type] = OOBTree()
 
         self.root[res_type][res_key] = obj
+        #self.root[res_type]._p_changed = 1
 
 
     def getResource(self, res_type, res_key):
@@ -77,14 +78,14 @@ class ModelDBSession(object):
             return self.root[res_type][res_key]
         except KeyError, e:
             return None
-            #raise ModelDBException, 'get resource %s failed' % e.args[0]
+            #raise ModelDBException, "get resource %s failed" % e.args[0]
 
 
-    def unsetResource(self, res_type, res_key):
+    def delResource(self, res_type, res_key):
         try:
             self.root[res_type].pop(res_key)
         except KeyError, e:
-            raise ModelDBException, 'unset resource %s failed' % e.args[0]
+            raise ModelDBException, "delete resource %s failed" % e.args[0]
 
 
     def commit(self):
