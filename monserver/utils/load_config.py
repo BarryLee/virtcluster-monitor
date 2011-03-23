@@ -2,7 +2,7 @@
 
 import os.path
 
-#from utils import parent_dir
+from utils import parent_dir
 
 DEFAULT_CONFIG_FILE = parent_dir(__file__) + os.path.sep + 'serverrc'
 

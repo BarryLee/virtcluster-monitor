@@ -2,7 +2,7 @@ import ZODB.config
 import transaction
 from BTrees.OOBTree import OOBTree
 
-from server.includes.singletonmixin import Singleton
+from monserver.includes.singletonmixin import Singleton
 #from utils.utils import put_to_dict
 
 
