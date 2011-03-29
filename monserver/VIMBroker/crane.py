@@ -1,2 +1,2 @@
 
-from os.path import *
+from cloud import *

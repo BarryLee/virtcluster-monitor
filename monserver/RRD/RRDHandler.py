@@ -17,7 +17,7 @@ from utils.get_logger import get_logger
 from models.Interface import host_metric_conf
 
 
-logger = get_logger('RRD.RRDHandler')
+logger = get_logger("RRD.RRDHandler")
 
 
 class RRDHandlerException(Exception):
@@ -36,7 +36,9 @@ class RRDHandler(Singleton):
 
 
     def suffix(self, prefix, metric_name):
-        return prefix + '_' + metric_name + '.rrd'
+        if len(prefix):
+            prefix += "-"
+        return prefix + metric_name + ".rrd"
 
 
     def pathScheme(self, host_id, prefix, metric_name):
@@ -57,16 +59,16 @@ class RRDHandler(Singleton):
     #def onDataArrival(self, host_obj, data):
     def onDataArrival(self, host_id, data):
         #host_id = host_obj.id
-        prefix = data.has_key('prefix') and data['prefix'] or ''
-        timestamp = data['timestamp']
+        prefix = data.has_key("prefix") and data["prefix"] or ""
+        timestamp = data["timestamp"]
         #metric_conf = host_obj.metric_list
-        for metric_name, metric_val in data['val'].items():
+        for metric_name, metric_val in data["val"].items():
             dir, rrd = self.pathScheme(host_id, prefix, metric_name)
             rrd = dir + os.path.sep + rrd
             try:
                 rrdtool.update(rrd, "%d:%s"%(timestamp,metric_val))
             except rrdtool.error, e:
-                if 'No such file' in e.args[0]:
+                if "No such file" in e.args[0]:
                     self._lock.acquire()
                     if not os.path.exists(dir):
                         try:
@@ -78,48 +80,24 @@ class RRDHandler(Singleton):
                     
                     self.create(host_id, prefix, metric_name, rrd)
                 else:
-                    logger.exception('%s, %s, %s' % 
+                    logger.exception("%s, %s, %s" % 
                                      (host_id, metric_name, metric_val))
                     raise RRDHandlerException, str(e)
-
         
-    #def write(self, host_id, metric_name, val):
-        ##print "writing to db...%s:%s:%s" % (host_id, metric_name, val)
 
-        #dir_path, rrd_db = self.pathScheme(host_id, metric_name)
-        #self._lock.acquire()
-        #if not os.path.exists(dir_path):
-            #try:
-                #os.makedirs(dir_path)
-            #except OSError, e:
-                ##if e.errno != 17:  # if not because file already exists
-                #raise e
-        #self._lock.release()
-
-        ##rrd_db = dir_path + os.sep + rrd_db
-        #self.cd(dir_path)
-        #try:
-            #if not os.path.exists(rrd_db):
-                #self.create(host_id, metric_name, rrd_db)
-        
-            #ret = self.rrdGroupUpdata(rrd_db, val)
-
-        #except rrdtool.error, e:
-            #logger.exception('%s, %s, %s' % (host_id, metric_name, val))
-            #raise RRDHandlerException, str(e)
-
-
-    def read(self, host_id, metric_name, cf='AVERAGE', resolution=5, start=None, end=None):
+    def read(self, host_id, metric_name, cf="AVERAGE", resolution=5, start=None, end=None):
         # Read monitor data
         # The most recent data will be retrived if neither start
         # nor end is given
+        #logger.debug('start is %s, end is %s' % (start, end))
         resolution = int(resolution)
-        host_rrd_dir, rrd_db = self.pathScheme(host_id, '', metric_name)
+        host_rrd_dir, rrd_db = self.pathScheme(host_id, "", metric_name)
         if not os.path.exists(host_rrd_dir):
-            logger.error('cannot find data of host %s' % host_id)
-            raise RRDHandlerException, 'host %s is not monitored' % host_id
+            logger.error("cannot find data of host %s" % host_id)
+            raise RRDHandlerException, "host %s is not monitored" % host_id
+        rrd_db = host_rrd_dir + os.path.sep + rrd_db
         if not os.path.exists(rrd_db):
-            raise RRDHandlerException, 'metric %s not found' % metric_name
+            raise RRDHandlerException, "metric file %s not found" % rrd_db
         try:
             if start is None:
                 #val = self.rrd_fetch_latest(rrd_db, cf, resolution)
@@ -128,7 +106,7 @@ class RRDHandler(Singleton):
                 #val = self.rrd_fetch(rrd_db, cf, resolution, start, end)
                 ret = rrdfetch_wrapper(rrd_db, cf, resolution, start, end)
         except rrdtool.error, e:
-            logger.exception('%s, %s, %s, %s, %s' % (rrd_db, cf, resolution, start, end))
+            logger.exception("%s, %s, %s, %s, %s" % (rrd_db, cf, resolution, start, end))
             raise RRDHandlerException, str(e)
 
         return ret
@@ -145,17 +123,17 @@ class RRDHandler(Singleton):
 
     def _getMetricMetricgrp(self, prefix, metric_name, metric_conf):
         found = None
-        #metric_groups = metric_conf['metric_groups']
+        #metric_groups = metric_conf["metric_groups"]
         metric_groups = metric_conf
         for metric_group in metric_groups:
-            if prefix != '':
-                if not (metric_group.has_key('instances') and 
+            if prefix != "":
+                if not (metric_group.has_key("instances") and 
                         reduce(lambda x,y: x+y,
-                               (i['device']==prefix \
-                                for i in metric_group['instances']))):
+                               (i["device"]==prefix \
+                                for i in metric_group["instances"]))):
                     continue
-            for metric in metric_group['metrics']:
-                if metric['name'] == metric_name:
+            for metric in metric_group["metrics"]:
+                if metric["name"] == metric_name:
                     found = (metric_group, metric)
                     break
 
@@ -180,20 +158,20 @@ class RRDHandler(Singleton):
             metric = found[1]
             from time import time
             start = str(int(time()) - 60)
-            step = metric_group['period']
+            step = metric_group["period"]
             heartbeat = step * 2
-            #ds_type = (metric['type'] == 'continuous') and \
+            #ds_type = (metric["type"] == "continuous") and \
                     #"COUNTER" or "GAUGE"
-            ds_type = 'GAUGE'
-            max = metric.has_key('max') and str(metric["max"]) or "U"
-            min = metric.has_key('min') and str(metric["min"]) or "U"
+            ds_type = "GAUGE"
+            max = metric.has_key("max") and str(metric["max"]) or "U"
+            min = metric.has_key("min") and str(metric["min"]) or "U"
             xff = 0.5
             ttl = 3600 * 24
-            cf_time = metric_group['consolidation_intervals']
+            cf_time = metric_group["consolidation_intervals"]
             DSs = [[metric_name, ds_type, heartbeat, min, max]]
             RRAs = []
-            RRAs.append(['AVERAGE', xff, 1, ttl/step])
-            for cf in ('AVERAGE', 'MIN', 'MAX'):
+            RRAs.append(["AVERAGE", xff, 1, ttl/step])
+            for cf in ("AVERAGE", "MIN", "MAX"):
                 for i in cf_time:
                     RRAs.append([cf, xff, i/step, ttl/i])
 
@@ -218,7 +196,7 @@ def getInstance(rrdRoot):
         ins = MonDBHandler.getInstance(rrdRoot)
         return ins
     except SingletonException, e:
-        #logger.exception('')
+        #logger.exception("")
         ins = MonDBHandler.getInstance()
         return ins
 

@@ -19,17 +19,33 @@ def rrdcreate_wrapper(rrd_db, start=-10, step=300, DSs=[], RRAs=[]):
     rrdtool.create(rrd_db, *args)
             
 
-def rrdfetch_wrapper(rrd_db, cf, resolution, start=-24*3600, end=None):
+def rrdfetch_wrapper(rrd_db, cf, resolution, start=-3600, end=-1):
+    # type check
+    assert type(rrd_db) is str
+    assert type(cf) is str
+    assert type(resolution) is int
+    assert type(start) is int
+    assert type(end) is int
+    
+    assert start < end
+    #print 'start is %s, end is %s' % (start, end) 
+
     last = rrdtool.last(rrd_db)
     first = rrdtool.first(rrd_db)
-    if end is None or int(end) > last:
-        end = last
 
-    start = int(start)
     if start < 0:
         start = last + start
+    if end < 0:
+        end = last + end
+
+    if start >= last or end <= first:
+        return (start, end, resolution), []
+
     if start < first:
-        start = first 
+        start = first
+    if end > last:
+        end = last
+
     #print start, end
     # adjust the start/end time to match the result with the args
     #start = int(start) - int(resolution)

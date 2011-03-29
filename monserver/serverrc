@@ -8,11 +8,13 @@
 # network interface for internal communication
 local_interface = 'lo'
 # network interface for external access
-public_interface = 'eth0'
+public_interface = 'lo'
 # rpc server port number
 rpc_port = 20060
 # data server port number
 ds_port = 20060
+
+cache_server_port = 20061
 
 
 #
@@ -39,3 +41,4 @@ agent_timeout = 300
 check_alive_interval = 60
 
 
+cache_size = 10000

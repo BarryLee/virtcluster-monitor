@@ -33,7 +33,7 @@ class test_rrdtool_wrapper(unittest.TestCase):
 
     def test_rrdcreate(self):
         start = -600
-        ttl = 3600
+        ttl = 2*3600
         ds_type = 'GAUGE'
         step = 15
         heartbeat = 2 * step
@@ -68,9 +68,10 @@ class test_rrdtool_wrapper(unittest.TestCase):
         self._test_rrdupdate()
         rrd_file = self.rrd1
         cf = 'AVERAGE'
-        step = 60
-        start = -240
-        end = int(time.time())
+        step = 15
+        start = -60
+        #end = int(time.time())
+        end = -45
         os.system('rrdtool fetch %s %s -r %d -s %d -e %d' % \
                   (rrd_file, cf, step, start, end))
         myprint(rrdtool.fetch(rrd_file, cf, '-r', str(step), '-s', str(start), '-e', str(end)))
