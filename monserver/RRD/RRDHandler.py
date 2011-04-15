@@ -128,9 +128,8 @@ class RRDHandler(Singleton):
         for metric_group in metric_groups:
             if prefix != "":
                 if not (metric_group.has_key("instances") and 
-                        reduce(lambda x,y: x+y,
-                               (i["device"]==prefix \
-                                for i in metric_group["instances"]))):
+                        sum((i["device"]==prefix for i in 
+                             metric_group["instances"]))):
                     continue
             for metric in metric_group["metrics"]:
                 if metric["name"] == metric_name:

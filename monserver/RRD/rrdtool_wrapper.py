@@ -2,7 +2,7 @@ import rrdtool
 import os
 
 
-rrdtool.first = lambda x: int(os.popen('rrdtool first %s' % x).read())
+#rrdtool.first = lambda x: int(os.popen('rrdtool first %s' % x).read())
 
 
 def rrdcreate_wrapper(rrd_db, start=-10, step=300, DSs=[], RRAs=[]):

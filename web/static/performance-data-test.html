@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Flot Examples</title>
+    <link href="layout.css" rel="stylesheet" type="text/css"></link>
+    <!--[if IE]><script language="javascript" type="text/javascript" src="../static/js/excanvas.min.js"></script><![endif]-->
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.flot.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/utils.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/PlotWrapper.js"></script>
+ </head>
+    <body>
+    <!--<h1>Flot Examples</h1>-->
+
+    <div id="placeholder" style="width:600px;height:300px;"></div>
+
+<script id="source" language="javascript" type="text/javascript">
+$(function() {
+    var ds1 = new DataSeries({
+            name: 'cpu_usage',
+            series: {
+                label: 'CPU usage',
+                color: 'blue',
+                lines: {
+                    lineWidth: 1,
+                    //fillColor: 'black',
+                    fill: true
+                },
+                shadowSize: 0
+        }
+    });
+    var myPlot = new TimeSeriesPlotWrapper({
+        placeholder: 'placeholder',
+        data: ds1,
+        maxLength: 3600 
+    });
+    //console.log(myPlot.data);
+    var host = 'localhost';
+    var metric = 'cpu_usage';
+    var url = 'http://localhost:5000/monitor/' + host + '/' + metric;
+    console.log(url);
+    var period = 30000;
+    var step = 15;
+    var start = -3600;
+    myPlot.setAutoUpdate(ds1, period, function(args) {
+        console.log(args);
+        var url = args.url;
+        var step = args.step;
+        $.get(url,
+            { start: start,
+              step: step },
+            function(data) {
+                console.log(data);
+                data = eval(data)[1];
+                myPlot.updateDataSeries(ds1.name, data);
+                start = data[data.length - 1][0];
+                myPlot.doPlot();
+            }, 'text'); 
+    }, {url: url, step: step})();
+//    drawline = function(line, iter, step, max, func) {
+//        return function() {
+//            myPlot.updateDataSeries(line, [[iter, func(iter)]]);
+//            myPlot.doPlot();
+//            iter += step;
+//            if(iter >= max)
+//                myPlot.clearAutoUpdata(line);
+//        }
+//    }
+//    drawLine1 = myPlot.setAutoUpdate('line1', 10, 
+//            drawline('line1', iter1, step, max, function(x) {return Math.sin(x)}));
+//    console.log('here');
+//    drawLine2 = myPlot.setAutoUpdate('line2', 10, 
+//            drawline('line2', iter2, step, max, function(x) {return Math.cos(x)}));
+//    drawLine1();
+//    drawLine2();
+});
+</script>
+
+ </body>
+</html>

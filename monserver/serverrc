@@ -5,6 +5,8 @@
 #
 # network configs
 #
+# enable external access?
+external_access = 1
 # network interface for internal communication
 local_interface = 'lo'
 # network interface for external access

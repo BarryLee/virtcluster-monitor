@@ -27,6 +27,7 @@ class MonServer(object):
         try:
             platform_info = decode(msg)
             client_ip = get_request_data().client_address[0]
+            logger.debug(client_ip)
             sign_in_handler(client_ip, platform_info)
             return 1
         except Exception, e:
@@ -41,10 +42,15 @@ class MonServer(object):
 def main():
     config = load_config(SERVER_CONFIG_PATH)
 
-    local_host = get_ip_address(config.get("local_interface")) 
+    if config.get("external_access"):
+        local_host = '0.0.0.0'
+    else:
+        local_host = 'localhost'
+    #local_host = get_ip_address(config.get("local_interface")) 
 
     rpc_port = config.get("rpc_port")
-    rpc_server = ThreadingXMLRPCServer((local_host, rpc_port),)
+    rpc_server = ThreadingXMLRPCServer((local_host, rpc_port),
+                                       logRequests=False)
     #rpc_server.register_function(sign_in)
     #rpc_server.register_function(howru)
     rpc_server.register_instance(MonServer())
@@ -68,6 +74,10 @@ def main():
     while True:
         myprint(threading.enumerate())
         sleep(60)
+
+
+def bye():
+    logger.info('bye')
 
 
 if __name__ == "__main__":

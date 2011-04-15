@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Flot Examples</title>
+    <link href="layout.css" rel="stylesheet" type="text/css"></link>
+    <!--[if IE]><script language="javascript" type="text/javascript" src="../static/js/excanvas.min.js"></script><![endif]-->
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.flot.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/utils.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/PlotWrapper.js"></script>
+ </head>
+    <body>
+    <h1>Flot Examples</h1>
+
+    <div id="placeholder" style="width:600px;height:300px;"></div>
+
+<script id="source" language="javascript" type="text/javascript">
+$(function() {
+    ds1 = new DataSeries({
+            name: 'line1',
+            series: {
+                label: 'y = sin(x)',
+                color: 'black',
+                lines: {
+                    lineWidth: 1,
+                    //fillColor: 'black',
+                    //fill: true
+                },
+                shadowSize: 0
+        }
+    });
+    /*
+    ds2 = new DataSeries({
+            name: 'line2',
+            series: {
+                label: 'y = cos(x)', 
+                color: 'blue',
+                lines:{
+                    lineWidth: 2,
+                    //fillColor: 'red',
+                    //fill: true
+                },
+                hoverable: true,
+            shadowSize: 0
+        }
+    });*/
+    ds2 = new DataSeries('line2');
+    myPlot = new TimeSeriesPlotWrapper({
+        placeholder: 'placeholder',
+        data: [ds1, ds2],
+        maxLength: 3 
+    });
+    //myPlot.addDataSeries(ds1);
+    //myPlot.addDataSeries(ds2);
+    //console.log(myPlot.data);
+    iter1 = 0;
+    iter2 = 0;
+    step = 0.1;
+    max = 12;
+    drawline = function(line, iter, step, max, func) {
+        return function() {
+            myPlot.updateDataSeries(line, [[iter, func(iter)]]);
+            myPlot.doPlot();
+            iter += step;
+            if(iter >= max)
+                myPlot.clearAutoUpdata(line);
+        }
+    }
+    drawLine1 = myPlot.setAutoUpdate('line1', 10, 
+            drawline('line1', iter1, step, max, function(x) {return Math.sin(x)}));
+    console.log('here');
+    drawLine2 = myPlot.setAutoUpdate('line2', 10, 
+            drawline('line2', iter2, step, max, function(x) {return Math.cos(x)}));
+    //drawLine1 = function() {
+        //d1.push([iter, Math.sin(iter)]);
+    //    myPlot.updateDataSeries('line1', [[iter1, Math.sin(iter1)]]);
+    //    myPlot.doPlot();
+    //    iter1 += 0.1;
+    //    if(iter1 < 12)
+    //        setTimeout(drawLine1, 10);
+    //}
+//    drawLine2 = function() {
+//        myPlot.updateDataSeries('line2', [[iter2, Math.cos(iter2)]]);
+//        myPlot.doPlot();
+//        iter2 += 0.1;
+//        if(iter2 < 12)
+//            setTimeout(drawLine2, 11);
+//    }
+    drawLine1();
+    drawLine2();
+});
+</script>
+
+ </body>
+</html>

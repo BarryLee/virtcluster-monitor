@@ -90,10 +90,11 @@ class Interface(object):
             host = Host(ip)
             host.id = id
         else:
-            logger.debug("retieve object %s from db" % host)
+            logger.debug("retrieve object %s from db" % host)
 
         host.is_virtual = is_virtual
         host.virt_type = virt_type
+        host.ip = ip
 
         components = info.get("components")
 
@@ -106,7 +107,7 @@ class Interface(object):
             if di.has_key("disk"):
 
                 diskname = di.get("disk")
-                diskinfo= disksinfo.get(diskname)
+                diskinfo = disksinfo.get(diskname)
                 disk = Disk(**diskinfo)
                 disk.update({"name": diskname})
                 

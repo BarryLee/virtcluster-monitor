@@ -34,10 +34,11 @@ class PerfDataCache(Singleton):
 
 
     def rollover(self):
-        for entry, item in self._data_store.iteritems():
+        for entry in self._data_store.keys():
             #vlen = len(vlist)-1
             #n = int((1 - float(vlist[0]) / float(self._hit+1)) * vlen)
             #del vlist[1:n+1]
+            item = self._data_store[entry]
             item["lock"].acquire()
             vlist = item["data"]
             vlen = len(vlist)
@@ -68,8 +69,10 @@ class PerfDataCache(Singleton):
         bounds = [None, None]
 
         self._lock.acquire()
-        if not self._data_store.has_key((host, metric, stat, step)):
-            self._data_store[(host,metric,stat,step)] = {"hit":0, "data":[], "lock":threading.RLock()}
+        self._data_store.setdefault((host, metric, stat, step), 
+                                    {"hit":0, "data":[], "lock":threading.RLock()})
+        #if not self._data_store.has_key((host, metric, stat, step)):
+            #self._data_store[(host,metric,stat,step)] = {"hit":0, "data":[], "lock":threading.RLock()}
         self._lock.release()
 
         store = self._data_store[(host,metric,stat,step)]
@@ -168,8 +171,10 @@ class PerfDataCache(Singleton):
         #logger.debug("cache: \n%s" % self._data_store)
         logger.debug('vlist: %s' % vlist) 
         logger.debug('bounds: %s' % bounds)
-        ret = encode(((vlist[bounds[0]][0], vlist[bounds[1]][0], step), \
-               vlist[bounds[0]:bounds[1]+1]))
+        #ret = encode(((vlist[bounds[0]][0], vlist[bounds[1]][0], step), \
+               #vlist[bounds[0]:bounds[1]+1]))
+        ret = ((vlist[bounds[0]][0], vlist[bounds[1]][0], step), \
+               vlist[bounds[0]:bounds[1]+1])
         #if self.cache_size >= self.max_cache_size:
             #logger.warning("out of cache!")
             #self.rollover(store)
