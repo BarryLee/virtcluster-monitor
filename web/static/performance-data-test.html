@@ -2,62 +2,110 @@
 <html>
  <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Flot Examples</title>
+    <title></title>
     <link href="layout.css" rel="stylesheet" type="text/css"></link>
     <!--[if IE]><script language="javascript" type="text/javascript" src="../static/js/excanvas.min.js"></script><![endif]-->
     <script language="javascript" type="text/javascript" src="../static/js/jquery.min.js"></script>
-    <script language="javascript" type="text/javascript" src="../static/js/jquery.flot.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.flot.js"></script>
     <script language="javascript" type="text/javascript" src="../static/js/utils.js"></script>
     <script language="javascript" type="text/javascript" src="../static/js/PlotWrapper.js"></script>
  </head>
     <body>
     <!--<h1>Flot Examples</h1>-->
-
+    <input type="button" id='toggle' value='toggle realtime' />
     <div id="placeholder" style="width:600px;height:300px;"></div>
 
 <script id="source" language="javascript" type="text/javascript">
 $(function() {
-    var ds1 = new DataSeries({
+    var urlTemplate = '/monitor/{host}/{metric}?cf={cf}&step={step}';
+    var ds1 = new PerfDataSeries({
             name: 'cpu_usage',
-            series: {
-                label: 'CPU usage',
-                color: 'blue',
-                lines: {
-                    lineWidth: 1,
-                    //fillColor: 'black',
-                    fill: true
-                },
-                shadowSize: 0
-        }
+            host: 'localhost',
+            metric: 'cpu_usage',
+            title: 'CPU usage',
+            unit: 'pct',
+            urlTemplate: urlTemplate,
+            //series: {
+            //    //label: 'CPU usage',
+            //    color: 'blue',
+            //    lines: {
+            //        lineWidth: 1,
+            //        //fillColor: 'black',
+            //        fill: true
+            //    },
+            //    shadowSize: 1
+            //}
     });
-    var myPlot = new TimeSeriesPlotWrapper({
+    var ds2 = new PerfDataSeries({
+            name: 'bytes_in',
+            host: 'localhost',
+            metric: 'bytes_in', 
+            title: 'bytes in',
+            unit: 'B/s',
+            urlTemplate: urlTemplate
+    });
+    var ds3 = new PerfDataSeries({
+            name: 'bytes_out',
+            host: 'localhost',
+            metric: 'bytes_out', 
+            title: 'bytes out',
+            unit: 'B/s',
+            urlTemplate: urlTemplate
+    });
+    var ds4 = new PerfDataSeries({
+            name: 'mem_usage',
+            host: 'localhost',
+            metric: 'mem_usage', 
+            title: 'Memory usage',
+            unit: 'pct',
+            urlTemplate: urlTemplate
+    });
+
+    var myPlot = new PerfChart({
         placeholder: 'placeholder',
         data: ds1,
-        maxLength: 3600 
+        //maxRange: 3600 
+        step: 60
+    });
+    myPlot.addDataSeries(ds2);
+    myPlot.addDataSeries(ds3);
+    myPlot.addDataSeries(ds4);
+    myPlot.setRealTime(60000);
+    var r = 1;
+    $('input').click(function(e) {  
+        if(r == 1) {
+            myPlot.unsetRealTime();
+            r = 0;
+        } else {
+            r = 1;
+            myPlot.setRealTime(15000);
+        }
     });
     //console.log(myPlot.data);
-    var host = 'localhost';
-    var metric = 'cpu_usage';
-    var url = 'http://localhost:5000/monitor/' + host + '/' + metric;
-    console.log(url);
-    var period = 30000;
-    var step = 15;
-    var start = -3600;
-    myPlot.setAutoUpdate(ds1, period, function(args) {
-        console.log(args);
-        var url = args.url;
-        var step = args.step;
-        $.get(url,
-            { start: start,
-              step: step },
-            function(data) {
-                console.log(data);
-                data = eval(data)[1];
-                myPlot.updateDataSeries(ds1.name, data);
-                start = data[data.length - 1][0];
-                myPlot.doPlot();
-            }, 'text'); 
-    }, {url: url, step: step})();
+//    var host = 'localhost';
+//    var metric = 'cpu_usage';
+//    var url = 'http://localhost:5000/monitor/' + host + '/' + metric;
+//    console.log(url);
+//    var period = 30000;
+//    var step = 15;
+//    var start = -3600;
+//    myPlot.setAutoUpdate(ds1, period, function(ds, args) {
+//        //console.log(args);
+//        var url = args.url;
+//        var step = args.step;
+//        $.get(url,
+//            { start: start,
+//              step: step },
+//            function(data) {
+//                console.log(data);
+//                console.log(ds);
+//                step = data[0][2];
+//                data = data[1];
+//                myPlot.updateDataSeries(ds.name, data);
+//                start = data[data.length - 1][0] + step;
+//                myPlot.doPlot();
+//            }, 'json'); 
+//    }, {url: url, step: step})();
 //    drawline = function(line, iter, step, max, func) {
 //        return function() {
 //            myPlot.updateDataSeries(line, [[iter, func(iter)]]);

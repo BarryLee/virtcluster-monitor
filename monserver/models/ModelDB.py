@@ -77,8 +77,8 @@ class ModelDBSession(object):
         try:
             return self.root[res_type][res_key]
         except KeyError, e:
-            return None
-            #raise ModelDBException, "get resource %s failed" % e.args[0]
+            #return None
+            raise ModelDBException, "get resource %s failed" % e.args[0]
 
 
     def delResource(self, res_type, res_key):
@@ -94,7 +94,7 @@ class ModelDBSession(object):
 
     def close(self):
         self.connection.close()
-        self.root = None
+        del self.root
 
 
 

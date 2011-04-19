@@ -8,7 +8,7 @@ from time import sleep
 from ThreadingXMLRPCServer import ThreadingXMLRPCServer, get_request_data
 from PerfDataReciever import DataReciever
 from RRD.RRDHandler import RRDHandler
-from models.Interface import sign_in_handler, check_alive
+from models.Interface import sign_in_handler, check_alive, host_metric_conf 
 from utils.load_config import load_config
 from utils.get_logger import get_logger
 from utils.utils import *
@@ -38,14 +38,20 @@ class MonServer(object):
     def howru(self):
         return 1
 
+    
+    def metricList(self, hostID):
+        try:
+            metric_list = host_metric_conf(hostID)
+            #logger.warning(type(metric_list))
+            return 1, metric_list
+        except Exception, e:
+            return 0, ''
+            
 
 def main():
     config = load_config(SERVER_CONFIG_PATH)
 
-    if config.get("external_access"):
-        local_host = '0.0.0.0'
-    else:
-        local_host = 'localhost'
+    local_host = config.get("server_ip")
     #local_host = get_ip_address(config.get("local_interface")) 
 
     rpc_port = config.get("rpc_port")

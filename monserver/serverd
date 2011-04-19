@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 from includes.daemonize import startstop
-from server import main, bye
+from server import main, bye, load_config, SERVER_CONFIG_PATH
 
 from sys import stderr as sys_stderr
 
+config = load_config(SERVER_CONFIG_PATH)
+ofile = config.get('ofile', '/dev/null');
+efile = config.get('efile', ofile);
 
 startstop(stdout='/dev/null', 
-          stderr=sys_stderr, 
+          stderr=ofile,
           pidfile='/tmp/monserver.pid',
           on_exit=bye)
 main()

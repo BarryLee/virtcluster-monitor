@@ -3,6 +3,9 @@
  */
 
 
+if(!console || !console.log) var console = {log:function(v) {}};
+
+
 /**
  * defineClass( ) -- a utility function for defining JavaScript classes.
  *
@@ -138,5 +141,60 @@ function defineClass(data) {
 
     // Finally, return the constructor function
     return constructor;
+}
+
+
+function timeFormatter(step) {
+    return function(val, axis) {
+        val = val * 1000;
+        var now = new Date().getTime();
+        var theDate = new Date(val);
+        var time;
+        if(step < 60) {
+            //time = theDate.toLocaleTimeString();
+            time = theDate.toTimeString().split(' ')[0];
+        } else if(step < 3600) {
+            //time = theDate.toLocaleTimeString().slice(0, -3);
+            time = theDate.toTimeString().split(' ')[0].slice(0, -3);
+        } else if(step < 3600*24) {
+            //time = theDate.toLocaleTimeString().slice(0, 2);
+            time = theDate.toTimeString().split(' ')[0].slice(0, 2);
+            if(time > 12) time = (time - 12) + 'pm';
+            else time += 'am';
+        } else time = '';
+
+        var d = now - val;
+        var day;
+        if(d < 3600*1000*24) {
+            return time;
+        } else if(d < 3600*1000*24*7) {
+            day = theDate.toDateString().split(' ')[0];
+            return day + (time.length ? ('<br />' + time) : '');
+        } else if(d < 3600*1000*24*365) {
+            day = theDate.toDateString().split(' ').slice(1,3).join(' ');
+            return day + (time.length ? ('<br />' + time) : '');   
+        } else {
+            day = theDate.toDateString().split(' ');
+            return [day[1], day[3]].join(' ');
+        }
+    }
+}
+
+
+function scaleBytes(val, tickDecimals, base, postfix) {
+    var K, M, G;
+    if (base == 10) 
+        K = 1000, M = 1000000, G = 1000000000;
+    else K = 1024, M = 1048576, G = 1073741824;
+
+    if (val > G)
+        return (val / G).toFixed(tickDecimals) + " GB" + postfix;
+    else if (val > M)
+        return (val / M).toFixed(tickDecimals) + " MB" + postfix;
+    else if (val > K)
+        return (val / K).toFixed(tickDecimals) + " kB" + postfix;
+    else
+        return val.toFixed(tickDecimals) + " B" + postfix;
+
 }
 
