@@ -170,7 +170,7 @@ var PerfDataSeries = defineClass({
         DataSeries.call(this, args);
         this.host = args.host;
         this.metric = args.metric;
-        this.unit = args.unit;
+        this.unit = args.unit || 'none';
         this.title = args.title || args.metric;
         urlArgs = {
             host: args.host,
@@ -334,6 +334,12 @@ var PerfChart = defineClass({
                             u.tickDecimals = 1;
                             u.tickFormatter = function(val, axis) {
                                 return scaleBytes(val * 1024, axis.tickDecimals, 2, '');
+                            }
+                            break;
+                        case 'kB/s':
+                            u.tickDecimals = 1;
+                            u.tickFormatter = function(val, axis) {
+                                return scaleBytes(val * 1024, axis.tickDecimals, 2, '/s');
                             }
                             break;
                         case 'B/s':
