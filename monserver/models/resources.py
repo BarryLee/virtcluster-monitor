@@ -10,6 +10,10 @@ class ResourceBase(Persistent, Relation):
         self.__dict__.update(kwargs)
 
 
+    def __str__(self):
+        return str(self.__dict__)
+
+
     def update(self, dictattrs):
         self.__dict__.update(dictattrs)
 

@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title></title>
+    <link rel="stylesheet" href="css/jquery-ui.css" />
+    <!--[if IE]><script language="javascript" type="text/javascript" src="../static/js/excanvas.min.js"></script><![endif]-->
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.min.js"></script>
+
+    <script language="javascript" src="js/jquery.ui.core.js" type="text/javascript"></script>
+    <script language="javascript" src="js/jquery.ui.widget.js" type="text/javascript"></script>
+    <script language="javascript" src="js/jquery.ui.button.js" type="text/javascript"></script>
+    <script language="javascript" src="js/jquery.ui.position.js" type="text/javascript"></script>
+    <script language="javascript" src="js/jquery.ui.autocomplete.js" type="text/javascript"></script>
+    <script language="javascript" src="js/combobox.js" type="text/javascript"></script>
+    
+    <script language="javascript" type="text/javascript" src="../static/js/jquery.flot.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/utils.js"></script>
+    <script language="javascript" type="text/javascript" src="../static/js/PlotWrapper.js"></script>
+    <link href="css/simple-monitor.css" rel="stylesheet" type="text/css"></link>
+	<script>
+    $(function() {
+        var hostCombo = $('#host-combobox');
+        var metricCombo = $('#metric-combobox');
+        var configCont = $('#new-chart-config-container');
+        var collapseSymbol = $('#new-chart-trigger-symbol');
+
+        var hostListUrl = '/monitor/json/host-list',
+            metricListUrl = '/monitor/json/{host}/metric-list';
+
+        var fetchHosts = function(url, target) {
+            $.get(url
+            , function(data) {
+                $(target)
+                .empty()
+                .append($.map(data, function(v) {
+                    return '<option value="' + v + '">' + v + '</option>';
+                }).join(''))
+                .combobox({defaultVal: 'host'});
+            }
+            , 'json');
+        }
+
+        var fetchMetrics = function(url, target) {
+            $.get(url
+            ,function(data) {
+                for (var i = 0; i < data.length; i++) {
+                    var metricGroup = data[i];
+                    if (metricGroup.name == 'DiskModule') {
+                        
+                    }
+                }
+                $(target).combobox({defaultVal: 'metric'});
+            }
+            , 'json');
+        }
+
+        hostCombo.children('option').bind('selected', function(e, args) {
+            fetchMetrics(metricListUrl.replace(/\{host\}/, args.item.value), metricCombo);
+        });
+
+        $('a#new-chart-trigger').click(function(e) {
+            if (configCont.css('display') != 'none') {
+                configCont.css('display', 'none');
+                collapseSymbol.text('+');
+            } else {    
+                configCont.css('display', 'block');
+                collapseSymbol.text('-');
+                fetchOptions(hostListUrl, {}, $('#host-combobox'), 'host');
+            }
+        });
+
+        $("#cf-combobox").combobox({defaultVal: 'consolidation type'});
+        $("#metric-combobox").combobox({defaultVal: 'metric'});
+
+    });
+    </script>
+ </head>
+    <body>
+    <!--<h1>Simple Monitor</h1>-->
+    <span id="new-chart-trigger-symbol">+</span>
+    <a id="new-chart-trigger" href="#">add a new chart</a>
+    <div id="new-chart-config-container">
+        <div id="new-chart-config">
+            <select id="host-combobox" name=""></select>
+            <select id="metric-combobox" name=""></select>
+            <select id="cf-combobox" name="">
+                <option value="AVERAGE">average</option>
+                <option value="MAX">max</option>
+                <option value="MIN">min</option>
+            </select>
+        </div>
+    </div>
+    <hr />
+    <div id="chart-panel"></div>
+ </body>
+</html>

@@ -1,4 +1,4 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, url_for, redirect
 app = Flask(__name__)
 
 from monserver.PerfDataCache import PerfDataCache
@@ -18,8 +18,11 @@ rrd_root = config.get("RRD_root")
 db_handler = RRDHandler.getInstance(rrd_root)
 cache = PerfDataCache.getInstance(cache_size, db_handler)
 
-@app.route('/monitor/<host>/<metric>')
-@app.route('/monitor/<host>/rawdata/<metric>')
+@app.route('/monitor')
+def index():
+    return redirect(url_for('static', filename='simple-monitor.html'))
+
+@app.route('/monitor/json/<host>/<metric>')
 def get_stats(host, metric):
     only_latest = False
     cf = request.args.get('cf', 'AVERAGE')
@@ -42,19 +45,26 @@ mon_server_ip = '127.0.0.1'
 mon_server_port = 20060
 mon_server = ServerProxy('http://%s:%d'%(mon_server_ip, mon_server_port))
 
-@app.route('/monitor/<host>/metriclist')
+@app.route('/monitor/json/host-list')
+def get_host_list():
+    rc, host_list = mon_server.hostList()
+    if rc == 0:
+        abort(404)
+    return encode(host_list)
+
+@app.route('/monitor/json/<host>/metric-list')
 def get_metric_list(host):
     rc, metric_list = mon_server.metricList(host)
     if rc == 0:
         abort(404)
-    metric = request.args.get('metric')
-    if metric is not None:
-        if '-' in metric: prefix, metric = metric.split('-')
-        for mg in metric_list:
-            for mc in mg['metrics']:
-                if mc['name'] == metric:
-                    return encode(mc)
-        abort(404)
+    #metric = request.args.get('metric')
+    #if metric is not None:
+        #if '-' in metric: prefix, metric = metric.split('-')
+        #for mg in metric_list:
+            #for mc in mg['metrics']:
+                #if mc['name'] == metric:
+                    #return encode(mc)
+        #abort(404)
     return encode(metric_list)
 
 

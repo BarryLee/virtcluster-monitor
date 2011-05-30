@@ -57,6 +57,13 @@ def getidbyip(ip):
     return ret
     
 
+def get_active_hosts():
+    interface = Interface()
+    ret = interface.getActiveHosts()
+    interface.close()
+    return ret
+
+
 class Interface(object):
 
     DB_CONFIG_URL = cur_dir + os.path.sep + "modelstore.conf"
@@ -153,6 +160,10 @@ class Interface(object):
         session = self.session
         host_obj = session.getResource("active", ip)
         return host_obj
+
+
+    def getActiveHosts(self):
+        return self.session.getResource("active")
 
 
     def getIDByIP(self, ip):

@@ -60,12 +60,23 @@ $(function() {
             unit: 'pct',
             urlTemplate: urlTemplate
     });
+    var ds5 = new PerfDataSeries({
+            name: 'sdb-rps',
+            host: 'localhost',
+            metric: 'sdb-rps', 
+            title: 'reads/s of /dev/sdb',
+            urlTemplate: urlTemplate
+    });
 
     var myPlot = new PerfChart({
         placeholder: 'placeholder',
-        data: ds1,
+        data: [ds1, ds5],
         //maxRange: 3600 
-        step: 60
+        step: 60,
+        //options: {
+        //    lines: { show: true },
+        //    points: { show: true }
+        //}
     });
     myPlot.addDataSeries(ds2);
     myPlot.addDataSeries(ds3);

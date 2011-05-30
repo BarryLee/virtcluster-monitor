@@ -233,7 +233,7 @@ var PerfDataSeries = defineClass({
         if(!this.rawSeries.label) this.rawSeries.label = this.title;
     },
     methods: {
-        setArg: function(argName, argValue) {
+        setUrlArg: function(argName, argValue) {
             var i = this.url.indexOf(argName);
             if(i != -1) {
                 var url = this.url;

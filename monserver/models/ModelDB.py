@@ -73,9 +73,12 @@ class ModelDBSession(object):
         #self.root[res_type]._p_changed = 1
 
 
-    def getResource(self, res_type, res_key):
+    def getResource(self, res_type, res_key=None):
         try:
-            return self.root[res_type][res_key]
+            if res_key is None:
+                return self.root[res_type]
+            else:
+                return self.root[res_type][res_key]
         except KeyError, e:
             #return None
             raise ModelDBException, "get resource %s failed" % e.args[0]

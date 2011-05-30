@@ -8,7 +8,7 @@ from time import sleep
 from ThreadingXMLRPCServer import ThreadingXMLRPCServer, get_request_data
 from PerfDataReciever import DataReciever
 from RRD.RRDHandler import RRDHandler
-from models.Interface import sign_in_handler, check_alive, host_metric_conf 
+from models.Interface import sign_in_handler, check_alive, host_metric_conf, get_active_hosts 
 from utils.load_config import load_config
 from utils.get_logger import get_logger
 from utils.utils import *
@@ -45,6 +45,18 @@ class MonServer(object):
             #logger.warning(type(metric_list))
             return 1, metric_list
         except Exception, e:
+            logger.exception("")
+            return 0, ''
+
+    
+    def hostList(self):
+        try:
+            host_list = map(lambda x: x[1].id, 
+                            get_active_hosts().items())
+            #logger.error('%s'%host_list)
+            return 1, host_list
+        except Exception, e:
+            logger.exception("")
             return 0, ''
             
 
