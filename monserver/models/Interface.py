@@ -11,7 +11,7 @@ if par_dir not in sys.path:
     sys.path.append(par_dir)
 ###############################################################
 
-from ModelDB import ModelDB, ModelDBSession
+from ModelDB import ModelDB, ModelDBSession, ModelDBException
 from resources import Host, VirtualHost, CPU, Disk, Partition, NetworkInterface
 import ID
 from utils.load_config import load_config
@@ -92,10 +92,12 @@ class Interface(object):
 
         session = self.session
         #host = session.getResource(host_type, id)
-        host = session.getResource("all", id)
-        if host is None:
+        try:
+            host = session.getResource("all", id)
+        except ModelDBException:
             host = Host(ip)
             host.id = id
+            logger.debug("create record of %s:%s" % (id, ip))
         else:
             logger.debug("retrieve object %s from db" % host)
 
