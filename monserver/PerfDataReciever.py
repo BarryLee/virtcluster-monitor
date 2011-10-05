@@ -8,16 +8,25 @@ import time
 from models.Interface import Interface
 from utils.get_logger import get_logger
 from utils.utils import decode
-
+from event.connection import Connection
+from event.Event import Event
 
 logger = get_logger('PerfDateReciever')
 
+class PerfDataArrivalEvent(Event):
+
+    def __init__(self, occur_t, host, metric, val):
+        super(PerfDataArrivalEvent, self).__init__('PerfDataArrival', occur_t)
+        self.entity = host
+        self.metric = metric
+        self.val = val
 
 class DRRequestHandler(BaseRequestHandler):
 
-    def __init__(self, request, client_address, server, data_store_handler):
-        self.data_store_handler = data_store_handler
+    def __init__(self, request, client_address, server):
+        self.data_store_handler = server.data_store_handler
         self.model_int = Interface()
+        self.conn = Connection(server.event_server_address)
         BaseRequestHandler.__init__(self, request, client_address, server)
 
 
@@ -32,7 +41,10 @@ class DRRequestHandler(BaseRequestHandler):
             host_id = host_obj.id
             host_obj.last_arrival = time.time()
             self.model_int.close()
-            self.data_store_handler.onDataArrival(host_id, decode(data))
+            data = decode(data)
+            for evt in self.produceEvent(host_id, data):
+                print self.conn.sendEvent(evt)
+            self.data_store_handler.onDataArrival(host_id, data)
         except KeyError, e:
             # TODO 
             #logger.debug('recieved msg from unsigned host %s' % \
@@ -42,27 +54,39 @@ class DRRequestHandler(BaseRequestHandler):
         #set_session(ip, last_send=time.time())
         #self.passOn(host_id, data)
 
+    def produceEvent(self, host, data):
+        t = data['timestamp']
+        device = data.get('device','')
+        for m,v in data['val'].items():
+            yield PerfDataArrivalEvent(t, host, self.metricName(device,m), v)
+        
+    def metricName(self, device, metric):
+        if len(device):
+            device += '-'
+        return device + metric
 
-    def passOn(self, host, data):
-        msg = decode(data)
-        timestamp = msg['timestamp']
-        del msg['timestamp']
+    #def passOn(self, host, data):
+        #msg = decode(data)
+        #timestamp = msg['timestamp']
+        #del msg['timestamp']
 
-        for metric_name, val in msg.iteritems():
-            try:
-                self.data_store_handler.write(host, metric_name, 
-                                              '%d:%s' % (timestamp, val))
-            except Exception, e:
-                raise
+        #for metric_name, val in msg.iteritems():
+            #try:
+                #self.data_store_handler.write(host, metric_name, 
+                                              #'%d:%s' % (timestamp, val))
+            #except Exception, e:
+                #raise
 
 
 class DataReciever(ThreadingUDPServer):
 
     def __init__(self, server_address, data_store_handler, 
+                 event_server_address,
                  RequestHandlerClass=DRRequestHandler,
                  bind_and_activate=True):
         ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
         self.data_store_handler = data_store_handler
+        self.event_server_address = event_server_address
 
 
     def verify_request(self, request, client_address):
@@ -70,7 +94,7 @@ class DataReciever(ThreadingUDPServer):
         return True
 
 
-    def finish_request(self, request, client_address):
-        self.RequestHandlerClass(request, client_address, self, self.data_store_handler)
+    #def finish_request(self, request, client_address):
+        #self.RequestHandlerClass(request, client_address, self, self.data_store_handler)
 
 

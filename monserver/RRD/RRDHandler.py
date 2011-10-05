@@ -35,27 +35,24 @@ class RRDHandler(Singleton):
         self._temp = {}
 
 
-    def suffix(self, mod_name, device, metric_name):
-        if len(mod_name):
-            mod_name += '-'
+    def suffix(self, device, metric_name):
         if len(device):
             device += '-'
-        return mod_name + device + metric_name + ".rrd"
+        return device + metric_name + ".rrd"
 
 
-    def pathScheme(self, host_id, mod_name, device, metric_name):
-        return os.sep.join([self._root_dir, host_id]), self.suffix(mod_name, device, metric_name)
+    def pathScheme(self, host_id, device, metric_name):
+        return os.sep.join([self._root_dir, host_id]), self.suffix(device, metric_name)
 
 
     #def onDataArrival(self, host_obj, data):
     def onDataArrival(self, host_id, data):
         #host_id = host_obj.id
-        mod_name = data["module"]
         device = data.has_key("device") and data["device"] or ""
         timestamp = data["timestamp"]
         #metric_conf = host_obj.metric_list
         for metric_name, metric_val in data["val"].items():
-            dir, rrd = self.pathScheme(host_id, mod_name, device, metric_name)
+            dir, rrd = self.pathScheme(host_id, device, metric_name)
             rrd = dir + os.path.sep + rrd
             try:
                 rrdtool.update(rrd, "%d:%s"%(timestamp,metric_val))
@@ -70,20 +67,20 @@ class RRDHandler(Singleton):
                             raise e
                     self._lock.release()
                     
-                    self.create(host_id, mod_name, device, metric_name, rrd)
+                    self.create(host_id, device, metric_name, rrd)
                 else:
                     logger.exception("%s, %s, %s" % 
                                      (host_id, metric_name, metric_val))
                     raise RRDHandlerException, str(e)
         
 
-    def read(self, host_id, mod_name, device, metric_name, cf="AVERAGE", resolution=5, start=None, end=None):
+    def read(self, host_id, device, metric_name, cf="AVERAGE", resolution=5, start=None, end=None):
         # Read monitor data
         # The most recent data will be retrived if neither start
         # nor end is given
         #logger.debug('start is %s, end is %s' % (start, end))
         resolution = int(resolution)
-        host_rrd_dir, rrd_db = self.pathScheme(host_id, mod_name, device, metric_name)
+        host_rrd_dir, rrd_db = self.pathScheme(host_id, device, metric_name)
         if not os.path.exists(host_rrd_dir):
             logger.error("cannot find data of host %s" % host_id)
             raise RRDHandlerException, "host %s is not monitored" % host_id
@@ -113,31 +110,30 @@ class RRDHandler(Singleton):
             return metric_conf
 
 
-    def _getMetricMetricgrp(self, mod_name, device, metric_name, metric_conf):
+    def _getMetricMetricgrp(self, device, metric_name, metric_conf):
         found = None
         #metric_groups = metric_conf["metric_groups"]
         metric_groups = metric_conf
         for metric_group in metric_groups:
-            if metric_group['name'] == mod_name:
-                if device != "":
-                    if not (metric_group.has_key("instances") and 
-                            sum((i["device"]==device for i in 
-                                 metric_group["instances"]))):
-                        continue
-                for metric in metric_group["metrics"]:
-                    if metric["name"] == metric_name:
-                        found = (metric_group, metric)
-                        break
+            if device != "":
+                if not (metric_group.has_key("instances") and 
+                        sum((i["device"]==device for i in 
+                             metric_group["instances"]))):
+                    continue
+            for metric in metric_group["metrics"]:
+                if metric["name"] == metric_name:
+                    found = (metric_group, metric)
+                    break
 
         return found
 
 
     #def create(self, host_id, metric_name, rrd_db):
-    def create(self, host_id, mod_name, device, metric_name, rrd_db):
+    def create(self, host_id, device, metric_name, rrd_db):
         metric_conf = self._getMetricConf(host_id)
 
         #found = self._getMetricMetricgrp(metric_name, metric_conf)
-        found = self._getMetricMetricgrp(mod_name, device, metric_name, metric_conf)
+        found = self._getMetricMetricgrp(device, metric_name, metric_conf)
 
         if found is None:
             errmsg = "metric %s" % metric_name

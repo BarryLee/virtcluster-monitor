@@ -78,7 +78,9 @@ def main():
     rrd_root = config.get("RRD_root", "/dev/shm")    
     rrd_handler = RRDHandler.getInstance(rrd_root)
     ds_port = config.get("ds_port")
-    data_server = DataReciever((local_host, ds_port), rrd_handler)
+    es_port = config.get("es_port")
+    data_server = DataReciever((local_host, ds_port), rrd_handler,\
+                               (local_host, es_port))
     threadinglize(data_server.serve_forever, "data_server")()
     logger.info("start data server on %s:%d" % (local_host, ds_port))
 

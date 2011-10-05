@@ -10,6 +10,9 @@ server_ip = '0.0.0.0'
 rpc_port = 20060
 # data server port number
 ds_port = 20060
+# event server port number
+es_port = 20062
+srv_port = 20063
 
 cache_server_port = 20061
 

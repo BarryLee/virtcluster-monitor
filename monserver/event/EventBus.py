@@ -1,19 +1,17 @@
 import logging
-
+import time
 from Queue import Queue
-from SocketServer import StreamRequestHandler, TCPServer
-from multiprocessing import Process,Pool,Value
+from SocketServer import StreamRequestHandler, ThreadingTCPServer
 
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
+from monserver.includes.Singleton import MetaSingleton
 from monserver.utils.utils import threadinglize
 import Event
-#import pickle_methods
 
 logger = logging.getLogger("event.EventBus")
 
-class _Server(TCPServer):
-#class _Server(ThreadingTCPServer):
+class _Server(ThreadingTCPServer):
     pass
 
 class _RequestHandler(StreamRequestHandler):
@@ -22,12 +20,12 @@ class _RequestHandler(StreamRequestHandler):
         req = ''
         try:
             req = self.rfile.readline().strip()
-            print req
+            #print req
             evt = self.parse(req)
-            EventBus.onEventArrival(evt)
+            on_event_arrival(evt)
             self.wfile.write(0)
         except Event.error:
-            #logger.exception("Invalid event format")
+            logger.exception("Invalid event format")
             self.wfile.write(1)
 
     def parse(self, req_data):
@@ -35,134 +33,125 @@ class _RequestHandler(StreamRequestHandler):
 
 class EventBus(object):
 
-    _queue = Queue()
-    _subscribers = {}
-    _RUNNING = Value('i', 0)
+    __metaclass__ = MetaSingleton
 
-    def __init__(self, event_server_addr, manage_server_addr, 
+    def __init__(self, event_server_addr, service_server_addr, 
                  EventServerClass=_Server, 
-                 RequestHandlerClass=_RequestHandler,):
-                 #ManageServerClass=SimpleJSONRPCServer):
+                 RequestHandlerClass=_RequestHandler,
+                 ManageServerClass=SimpleJSONRPCServer):
         self._event_server_addr = event_server_addr
-        self._manage_server_addr = manage_server_addr
-        #self._queue = Queue()
+        self._service_server_addr = service_server_addr
+        self._queue = Queue()
         self._eventServer = EventServerClass(event_server_addr, RequestHandlerClass)
-        self._manageServer = SimpleJSONRPCServer(manage_server_addr)
-        #self._subscribers = {}
-        self._workers = Pool()
-        #self._RUNNING = Value('i', 0)
-
-    def __call__(self):
-        pass
+        self._serviceServer = SimpleJSONRPCServer(service_server_addr)
+        self._subscribers = {}
+        self._RUNNING = 0
+        self.__inited = True
 
     def startAll(self):
-        self._RUNNING.value = 1
-        #self._eventServerProcess = Process(target=self.startEventServer, args=())
-        #self._dispathProcess = Process(target=self.dispatch, args=())
-
-        #self._eventServerProcess.start()
-        #self._dispathProcess.start()
-
-        #self._workers.apply_async(self.startEventServer, args=())
-        #self._workers.apply_async(self.dispatch, args=())
-        #self.startManageServer()
-        print self.__dict__
+        logger.info("starting event bus...")
+        self._RUNNING = 1
+        #print self.__dict__
         threadinglize(self.startEventServer)()
         threadinglize(self.dispatch)()
-        from time import sleep
-        while True:
-            sleep(5)
+        self.startServiceServer()
 
     def halt(self):
         pass
 
-    @classmethod
-    def handleSubscribe(cls, etype, subscriber, entity=None, filter=None):
-        cls._subscribers.setdefault(etype, {})
-        entity = str(entity)
-        cls._subscribers[etype].setdefault(entity, set())
+    def handleSubscribe(self, etype, subscriber, entity=None, filter=None):
+        self._subscribers.setdefault(etype, {})
+        entity = str(entity) if entity is not None else '*'
+        subscribers = self._subscribers[etype].setdefault(entity, set())
         assert callable(subscriber)
         #if name is None: name = subscriber.__name__
         if filter:
             setattr(subscriber, '__filter__', filter)
-        cls._subscribers[etype][entity].add(subscriber)
+        subscribers.add(subscriber)
 
-    @classmethod
-    def handleUnsubscribe(cls, etype, subscriber, entity=None):
+    def handleUnsubscribe(self, etype, subscriber, entity=None):
         try:
-            cls._subscribers[etype][str(entity)].remove(subscriber)
+            self._subscribers[etype][str(entity)].remove(subscriber)
         except KeyError, e:
-            #logger.exception()
-            print e
+            logger.exception()
 
     def startEventServer(self):
-        #logger.info("Starting event server on %s:%s" % self._event_server_addr)
+        logger.info("Starting event server on %s:%s" % self._event_server_addr)
         self._eventServer.serve_forever()
 
-    def startManageServer(self):
-        #logger.info("Starting serice server on %s:%s" % self._manage_server_addr)
-        self._manageServer.register_function(self.handleSubscribe)
-        self._manageServer.register_function(self.handleUnsubscribe)
-        self._manageServer.serve_forever()
+    def shutdownEventServer(self):
+        self._eventServer.shutdown()
 
-    @classmethod
-    def onEventArrival(cls, evt):
-        cls._queue.put(evt)
+    def startServiceServer(self):
+        logger.info("Starting serice server on %s:%s" % self._service_server_addr)
+        self._serviceServer.register_function(self.handleSubscribe)
+        self._serviceServer.register_function(self.handleUnsubscribe)
+        self._serviceServer.serve_forever()
+
+    def shutdownServiceServer(self):
+        self._serviceServer.shutdown()
+
+    def onEventArrival(self, evt):
+        self._queue.put(evt)
 
     def route(self, evt):
-        print 'route'
-        entity = str(getattr(evt, 'entity', None))
+        #print 'route'
+        entity = str(getattr(evt, 'entity', '*'))
+        #print evt.eventType
+        #print self._subscribers
         subscriber_list = self._subscribers[evt.eventType][entity]
-        print subscriber_list
+        #print subscriber_list
         for s in subscriber_list:
             if hasattr(s, '__filter__'):
                 if s.__filter__(evt):
-                    threadinglize(s)(evt)
-                    #s(evt)
+                    s(evt)
             else:
-                threadinglize(s)(evt)
-                #s(evt)
+                s(evt)
 
     def dispatch(self):
         #logger.info("Starting dispatcher")
         while self._RUNNING:
             evt = self._queue.get(True)
-            print evt
-            #self._workers.apply_async(self.route, (evt,))
-            self._workers.apply(route, (evt,self._subscribers))
+            threadinglize(self.route)(evt)
 
-def route(evt, subscribers):
-    print 'route'
-    entity = str(getattr(evt, 'entity', None))
-    subscriber_list = subscribers[evt.eventType][entity]
-    print subscriber_list
-    for s in subscriber_list:
-        if hasattr(s, '__filter__'):
-            if s.__filter__(evt):
-                threadinglize(s)(evt)
-                #s(evt)
-        else:
-            threadinglize(s)(evt)
+    def cleanup(self):
+        self._RUNNING = False
+        self.shutdownEventServer()
+        self.shutdownServiceServer()
 
 def subscribe(etype, subscriber, entity=None, filter=None):
-    EventBus.handleSubscribe(etype, subscriber, entity, filter)
+    EventBus().handleSubscribe(etype, subscriber, entity, filter)
+
+def on_event_arrival(evt):
+    EventBus().onEventArrival(evt)
+
+def run(event_server_addr, service_server_addr):
+    EventBus(event_server_addr, service_server_addr).startAll()
 
 if __name__ == '__main__':
     ip = '0.0.0.0'
     port = 20062
     port2 = 20063
 
+    ebus = EventBus((ip, port), (ip, port2))
     def consumer1(evt):
         print 'c1: %s' % evt.eventType
 
     def consumer2(evt):
         print 'c2: %s' % evt.occurTime
 
-    ebus = EventBus((ip, port), (ip, port2))
+    subscribe('PerfDataArrival', consumer1, entity='xxx')
+    subscribe('PerfDataArrival', consumer2, entity='localhost')
     subscribe('RedAlarm', consumer1)
     subscribe('RedAlarm', consumer2)
     subscribe('AlienInvade', consumer1)
+    print ebus._subscribers
 
     #ebus.startEventServer()
-    ebus.startAll()
+    try:
+        ebus.startAll()
+    except KeyboardInterrupt:
+        print 'Bye'
+        time.sleep(1)
+        ebus.cleanup()
 

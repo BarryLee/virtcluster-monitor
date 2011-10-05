@@ -1,24 +1,19 @@
 
 import logging
 from Queue import Queue
-from SocketServer import StreamRequestHandler, TCPServer
-from multiprocessing import Process,Pool,Value
-#from multiprocessing import Queue
+from SocketServer import StreamRequestHandler, ThreadingTCPServer, TCPServer
 
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 from monserver.utils.utils import threadinglize
 import Event
 
-logger = logging.getLogger("event.EventBus")
+logger = logging.getLogger('event.event_bus')
 
-__queue = None
-__subscribers = None
-__workers = None
-__RUNNING = None
+__INITED = 0
 
-class _Server(TCPServer):
-#class _Server(ThreadingTCPServer):
+#class _Server(TCPServer):
+class _Server(ThreadingTCPServer):
     pass
 
 class _RequestHandler(StreamRequestHandler):
@@ -27,7 +22,7 @@ class _RequestHandler(StreamRequestHandler):
         req = ''
         try:
             req = self.rfile.readline().strip()
-            print req
+            #print req
             evt = self.parse(req)
             on_event_arrival(evt)
             self.wfile.write(0)
@@ -45,70 +40,73 @@ def start_event_server(addr):
 def on_event_arrival(evt):
     global __queue
     __queue.put(evt)
+    print __queue
 
 def add_subscriber(etype, subscriber, entity=None, filter=None):
     global __subscribers
-    __subscribers.setdefault(etype, {})
+    d = __subscribers.setdefault(etype, {})
     entity = str(entity)
-    __subscribers[etype].setdefault(entity, set())
+    d.setdefault(entity, set())
     assert callable(subscriber)
-    #if name is None: name = subscriber.__name__
     if filter:
         setattr(subscriber, '__filter__', filter)
-    __subscribers[etype][entity].add(subscriber)
+    d[entity].add(subscriber)
+    __subscribers[etype] = d
 
 def rm_subscriber(etype, subscriber, entity=None):
     global __subscribers
     try:
-        __subscribers[etype][str(entity)].remove(subscriber)
+        d = __subscribers[etype]
+        d[str(entity)].remove(subscriber)
+        __subscribers[etype] = d
     except KeyError, e:
         logger.exception()
-        print e
 
-def route_event(evt, subscribers):
+def route_event(evt):#, subscribers):
+    global __subscribers
     print 'route'
     entity = str(getattr(evt, 'entity', None))
-    subscriber_list = subscribers[evt.eventType][entity]
+    subscriber_list = __subscribers[evt.eventType][entity]
     print subscriber_list
     for s in subscriber_list:
         if hasattr(s, '__filter__'):
             if s.__filter__(evt):
-                #threadinglize(s)(evt)
-                s(evt)
+                threadinglize(s)(evt)
+                #s(evt)
         else:
-            #threadinglize(s)(evt)
-            s(evt)
+            threadinglize(s)(evt)
+            #s(evt)
 
 def dispatch():
     global __queue
-    global __workers
-    global __subscribers
+    #global __subscribers
 
     while __RUNNING:
         evt = __queue.get(True)
-        print evt
-        __workers.apply_async(route_event, (evt, __subscribers))
+        route_event(evt)
+        #threadinglize(route_event)(evt)
 
 def init():
     global __queue
     global __subscribers
-    global __workers
     global __RUNNING
+    global __INITED
+
+    if __INITED:
+        logger.error('There can only be one')
+        return
 
     __queue = Queue()
     __subscribers = {}
-    __workers = Pool()
-    __RUNNING = Value('i', 0)
+    __RUNNING = 0
+    __INITED = 1
 
 def run(addr1, addr2):
     global __RUNNING
-    global __workers
 
-    __RUNNING.value = 1
+    __RUNNING = 1
     threadinglize(start_event_server)(addr1)
     threadinglize(dispatch)()
-    #__workers.apply_async(start_event_server, (addr1,))
-    #__workers.apply_async(dispatch, ())
 
     from time import sleep
     while True:
