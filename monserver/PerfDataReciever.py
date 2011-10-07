@@ -3,15 +3,17 @@ data
 """
 from SocketServer import BaseRequestHandler, ThreadingUDPServer
 import time
+import logging
 
 #from models.interface import getidbyip 
 from models.Interface import Interface
-from utils.get_logger import get_logger
+#from utils.get_logger import get_logger
 from utils.utils import decode
 from event.connection import Connection
 from event.Event import Event
 
-logger = get_logger('PerfDateReciever')
+#logger = get_logger('PerfDateReciever')
+logger = logging.getLogger('PerfDateReciever')
 
 class PerfDataArrivalEvent(Event):
 

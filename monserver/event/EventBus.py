@@ -7,9 +7,11 @@ from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 from monserver.includes.Singleton import MetaSingleton
 from monserver.utils.utils import threadinglize
+#from monserver.utils.get_logger import get_logger
 import Event
 
 logger = logging.getLogger("event.EventBus")
+#logger = get_logger("event.EventBus")
 
 class _Server(ThreadingTCPServer):
     pass
@@ -21,15 +23,16 @@ class _RequestHandler(StreamRequestHandler):
         try:
             req = self.rfile.readline().strip()
             #print req
-            evt = self.parse(req)
+            #evt = self.parse(req)
+            evt = Event.loads(req)
             on_event_arrival(evt)
             self.wfile.write(0)
         except Event.error:
             logger.exception("Invalid event format")
             self.wfile.write(1)
 
-    def parse(self, req_data):
-        return Event.loads(req_data)
+    #def parse(self, req_data):
+        #return Event.loads(req_data)
 
 class EventBus(object):
 
@@ -38,15 +41,15 @@ class EventBus(object):
     def __init__(self, event_server_addr, service_server_addr, 
                  EventServerClass=_Server, 
                  RequestHandlerClass=_RequestHandler,
-                 ManageServerClass=SimpleJSONRPCServer):
+                 ServiceServerClass=SimpleJSONRPCServer):
         self._event_server_addr = event_server_addr
         self._service_server_addr = service_server_addr
         self._queue = Queue()
         self._eventServer = EventServerClass(event_server_addr, RequestHandlerClass)
-        self._serviceServer = SimpleJSONRPCServer(service_server_addr)
+        self._serviceServer = ServiceServerClass(service_server_addr)
         self._subscribers = {}
         self._RUNNING = 0
-        self.__inited = True
+        #self.__inited = True
 
     def startAll(self):
         logger.info("starting event bus...")
@@ -57,16 +60,16 @@ class EventBus(object):
         self.startServiceServer()
 
     def halt(self):
-        pass
+        self.cleanup()
 
-    def handleSubscribe(self, etype, subscriber, entity=None, filter=None):
+    def handleSubscribe(self, etype, subscriber, entity=None, match=None):
         self._subscribers.setdefault(etype, {})
         entity = str(entity) if entity is not None else '*'
         subscribers = self._subscribers[etype].setdefault(entity, set())
         assert callable(subscriber)
         #if name is None: name = subscriber.__name__
-        if filter:
-            setattr(subscriber, '__filter__', filter)
+        if match:
+            setattr(subscriber, '__match__', match)
         subscribers.add(subscriber)
 
     def handleUnsubscribe(self, etype, subscriber, entity=None):
@@ -84,12 +87,23 @@ class EventBus(object):
 
     def startServiceServer(self):
         logger.info("Starting serice server on %s:%s" % self._service_server_addr)
-        self._serviceServer.register_function(self.handleSubscribe)
-        self._serviceServer.register_function(self.handleUnsubscribe)
+        #self._serviceServer.register_function(self.handleSubscribe)
+        #self._serviceServer.register_function(self.handleUnsubscribe)
         self._serviceServer.serve_forever()
 
     def shutdownServiceServer(self):
         self._serviceServer.shutdown()
+
+    def registerService(self, func):
+        #def wrap(func):
+            #ebus = self
+            #def wrapped(*args, **kwargs):
+                #func(*args, **kwargs)
+
+            #wrapped.__name__ = func.__name__
+            #return wrapped
+        #self._serviceServer.register_function(wrap(func))
+        self._serviceServer.register_function(func)
 
     def onEventArrival(self, evt):
         self._queue.put(evt)
@@ -102,8 +116,8 @@ class EventBus(object):
         subscriber_list = self._subscribers[evt.eventType][entity]
         #print subscriber_list
         for s in subscriber_list:
-            if hasattr(s, '__filter__'):
-                if s.__filter__(evt):
+            if hasattr(s, '__match__'):
+                if s.__match__(evt):
                     s(evt)
             else:
                 s(evt)
@@ -119,8 +133,8 @@ class EventBus(object):
         self.shutdownEventServer()
         self.shutdownServiceServer()
 
-def subscribe(etype, subscriber, entity=None, filter=None):
-    EventBus().handleSubscribe(etype, subscriber, entity, filter)
+def subscribe(etype, subscriber, entity=None, match=None):
+    EventBus().handleSubscribe(etype, subscriber, entity, match)
 
 def on_event_arrival(evt):
     EventBus().onEventArrival(evt)
@@ -138,13 +152,13 @@ if __name__ == '__main__':
         print 'c1: %s' % evt.eventType
 
     def consumer2(evt):
-        print 'c2: %s' % evt.occurTime
+        print 'c2: %s:%s:%s:%s' % (evt.occurTime, evt.entity, evt.metric, evt.val)
 
     subscribe('PerfDataArrival', consumer1, entity='xxx')
     subscribe('PerfDataArrival', consumer2, entity='localhost')
-    subscribe('RedAlarm', consumer1)
-    subscribe('RedAlarm', consumer2)
-    subscribe('AlienInvade', consumer1)
+    #subscribe('RedAlarm', consumer1)
+    #subscribe('RedAlarm', consumer2)
+    #subscribe('AlienInvade', consumer1)
     print ebus._subscribers
 
     #ebus.startEventServer()

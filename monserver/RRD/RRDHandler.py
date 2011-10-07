@@ -1,6 +1,7 @@
 import os
 import sys
 import threading
+import logging
 
 ###############################################################
 # temporary solution for importing upper level modules/packages
@@ -13,11 +14,12 @@ if par_dir not in sys.path:
 
 from includes.singletonmixin import Singleton, SingletonException
 from rrdtool_wrapper import *
-from utils.get_logger import get_logger
+#from utils.get_logger import get_logger
 from models.Interface import host_metric_conf
 
 
-logger = get_logger("RRD.RRDHandler")
+#logger = get_logger("RRD.RRDHandler")
+logger = logging.getLogger("RRD.RRDHandler")
 
 
 class RRDHandlerException(Exception):

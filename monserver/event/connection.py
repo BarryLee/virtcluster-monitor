@@ -16,7 +16,7 @@ class Connection(object):
         try:
             sock.connect(self._addr)
 
-            print '%s\r\n' % str(evt)
+            #print '%s\r\n' % str(evt)
             sock.send('%s\r\n' % str(evt))
             #res = ''
             #while True:
@@ -25,8 +25,8 @@ class Connection(object):
                     #break
                 #res += chunk
             res = sock.recv(BUFSIZE)
-            print res 
-            if res != 0:
+            #print res 
+            if res != '0':
                 ret = False
             else:
                 ret = True

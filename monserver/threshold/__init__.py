@@ -1,77 +1,35 @@
 
-import threading
-from time import time
+import json
+import logging
 
-from monserver.event.Event import Event
+from Threshold import Threshold, CompositeThreshold
 
-class Threshold(object):
+logger = logging.getLogger('threshold')
 
-    def __init__(self, conn, host, metric, ttype, tval, callback=None):
-        self.conn = conn
-        self.host = host
-        self.metric = metric
-        self.threshold = tval
-        if ttype == 'gt':
-            self.matcher = lambda x: x > self.threshold
-        elif ttype == 'lt':
-            self.matcher = lambda x: x < self.threshold
+def set_threshold(threshold_specs):
+    """set a threshold.
+    thresold_specs example:
+    { 'hid': 'localhost', # host id
+      'threshold': (      # a tuple of thresholds on metrics
+        ('cpu_usage', 80, 0), # format: ('metric_name', threshold_value, threshold_type), for threshold_type, 0 refers to upper bound, 1 refers to lower bound
+        ('r/s', 400, 0)
+      ),
+      'win_size': 60, # window size, in seconds
+      'sample_interval': 60,     # sample interval, in seconds
+      'stats': 'AVERAGE'  # supports AVERAGE, MAX or MIN
+    }
+    """
+    try:
+        ts = json.loads(threshold_specs)
+        hid = ts['hid']
+        threshold = ts['threshold']
+    except ValueError, e:
+        logger.error('invalid threshold_specs format: %s' % threshold_specs)
+        return 1
+    except KeyError, e:
+        logger.exception('invalid threshold_specs format: %s' % threshold_specs)
+        return 2
 
-        self.callback = callback
-        self.etype = 'ThresholdViolation'
-
-    def composeEvent(self, v):
-        return Event(self.etype, entity=self.host, metric=self.metric,\
-                    threshold=self.threshold, val=v)
-        
-    def __call__(self, evt):
-        ret = 0
-        if evt.metric == self.metric:
-            if self.matcher(evt.val):
-                ret = 1
-                self.conn.sendEvent(self.composeEvent(evt.val))
-                if self.callback:
-                    self.callback(evt)
-        return ret
-
-class CompositeThreshold(object):
-
-    _lock = threading.RLock()
-
-    def __init__(self, conn, window, thresholds=[], callback=None):
-        self.conn = conn
-        self.thresholds = thresholds
-        self.alerts = [0 for i in thresholds]
-        self.matcher = lambda : reduce(lambda x,y: x*y, self.alerts)
-        self.win = window
-        self.etype = 'ThresholdViolation'
-        self.last = 0
-
-    def addThreshold(self, t):
-        self.thresholds.append(t)
-        self.alerts.append(0)
-
-    def composeEvent(self):
-        return Event(self.etype)
-
-    def __call__(self, evt):
-        ret = 0
-        try:
-            self._lock.acquire()
-            t = time()
-            if t-self.last > self.win:
-                self.alerts = [0] * len(self.thresholds)
-
-            for i,threshold in enumerate(self.thresholds):
-                if evt.metric == threshold.metric and\
-                   threshold.matcher(evt.val):
-                    self.last = t
-                    self.alerts[i] = 1
-
-            if self.matcher(self.alerts):
-                ret = 1
-                self.conn.sendEvent(self.composeEvent())
-                if self.callback:
-                    self.callback(evt)
-        finally:
-            self._lock.release()
-            return ret
+    if len(threshold) > 1:
+        for t in threshold:
+            pass
