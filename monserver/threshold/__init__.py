@@ -6,6 +6,9 @@ from Threshold import Threshold, CompositeThreshold
 
 logger = logging.getLogger('threshold')
 
+DEFAULT_WIN_SZ = 60
+DEFAULT_STATS = 'AVERAGE'
+
 def set_threshold(threshold_specs):
     """set a threshold.
     thresold_specs example:
