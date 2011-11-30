@@ -12,7 +12,7 @@ if par_dir not in sys.path:
 ###############################################################
 
 from ModelDB import ModelDB, ModelDBSession, ModelDBException
-from resources import Host, VirtualHost, CPU, Disk, Partition, NetworkInterface
+from resources import Host, VM, CPU, Disk, Partition, NetworkInterface
 import ID
 from utils.load_config import load_config
 from utils.utils import decode
@@ -24,10 +24,11 @@ logger = get_logger("models.interface")
 cur_dir = _(__file__)
 
 
-def sign_in_handler(ip, info):
+def register(ip, info):
     interface = Interface()
-    interface.signIn(ip, info)
+    hid = interface.register(ip, info)
     interface.close()
+    return hid
 
 
 def host_metric_conf(host_id):
@@ -46,7 +47,7 @@ def check_alive(timeout):
 def check_expire(expire_time):
     interface = Interface()
     interface.checkExpire("Host", expire_time)
-    interface.checkExpire("VirtualHost", expire_time)
+    interface.checkExpire("VM", expire_time)
     interface.close()
 
 
@@ -82,61 +83,64 @@ class Interface(object):
         self.session.close()
 
 
-    def signIn(self, ip, info):
+    def register(self, ip, info):
         is_virtual = info.get("virtual")
         virt_type = info.get("virt_type")
 
-        if not is_virtual:
-            id = ID.host_id_gen(ip)
-            host_type = "Host"
-
         session = self.session
-        #host = session.getResource(host_type, id)
-        try:
-            host = session.getResource("all", id)
-        except ModelDBException:
-            host = Host(ip)
-            host.id = id
-            logger.debug("create record of %s:%s" % (id, ip))
-        else:
-            logger.debug("retrieve object %s from db" % host)
 
-        host.is_virtual = is_virtual
+        if is_virtual:
+            host = VM(ip)
+        else:
+            host = Host(ip)
+        logger.debug("create record of %s:%s" % (host.id, ip))
+
+        #host.is_virtual = is_virtual
         host.virt_type = virt_type
-        host.ip = ip
 
         components = info.get("components")
 
-        cpuinfo = components.get("cpu")
-        cpu = CPU(**cpuinfo)
-        host.hasOne("cpu", cpu)
+        if components is not None:
+            # create component objects
 
-        disksinfo = components.get("filesystem")["local"]
-        for dn, di in disksinfo.iteritems():
-            if di.has_key("disk"):
+            # cpu
+            cpuinfo = components.get("cpu")
+            if cpuinfo is not None:
+                cpu = CPU(**cpuinfo)
+                host.hasOne("cpu", cpu)
 
-                diskname = di.get("disk")
-                diskinfo = disksinfo.get(diskname)
-                disk = Disk(**diskinfo)
-                disk.update({"name": diskname})
-                
-                partition = Partition(**di)
-                partition.update({"name": dn})
+            # disk
+            disksinfo = components.get("filesystem")["local"]
+            for dn, di in disksinfo.iteritems():
+                if di.has_key("disk"):
 
-                disk.addOne("partitions", dn, partition)
-                host.addOne("disks", diskname, disk)
-            else:
-                continue
+                    diskname = di.get("disk")
+                    diskinfo = disksinfo.get(diskname)
+                    disk = Disk(**diskinfo)
+                    disk.update({"name": diskname})
+                    
+                    partition = Partition(**di)
+                    partition.update({"name": dn})
 
-        meminfo = components.get("memory")
-        host.update(meminfo)
+                    disk.addOne("partitions", dn, partition)
+                    host.addOne("disks", diskname, disk)
+                else:
+                    continue
+            # end for
 
-        ifsinfo = components.get("network")
-        for ifn, ifi in ifsinfo.iteritems():
-            if ifn not in ("lo",):
-                network_interface = NetworkInterface(**ifi)
-                network_interface.update({"name": ifn})
-                host.addOne("network_interfaces", ifn, network_interface)
+            # mem
+            meminfo = components.get("memory")
+            if meminfo is not None:
+                host.update(meminfo)
+
+            # network
+            ifsinfo = components.get("network")
+            for ifn, ifi in ifsinfo.iteritems():
+                if ifn not in ("lo",):
+                    network_interface = NetworkInterface(**ifi)
+                    network_interface.update({"name": ifn})
+                    host.addOne("network_interfaces", ifn, network_interface)
+        # end if
 
         host.metric_list = info["metric_groups"]
 
@@ -148,7 +152,7 @@ class Interface(object):
         #session.root._p_changed = 1
         session.commit()
         logger.info("%s(%s) signed in" % (host.id, host.ip))
-        
+        return host.id        
 
     def hostMetricConf(self, host_id):
         session = self.session

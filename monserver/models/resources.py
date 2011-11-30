@@ -1,8 +1,7 @@
 
 from persistent import Persistent
-
 from Relation import Relation
-
+import ID
 
 class ResourceBase(Persistent, Relation):
 
@@ -35,22 +34,32 @@ class Host(ResourceBase):
         self.ip = ip
         #for k, v in extrainfo:
             #setattr(self, k, v)
+        self.id = ID.get_id(self)
         self.__dict__.update(extrainfo)
 
 
-class VirtualHost(Host): 
-    pass
+class VM(Host): 
+    pass    
 
 
 class CPU(ResourceBase):
+    """Fields of CPU:
+        cpu_num: int
+        (opt)cpu_MHz: str
+    """
     pass
 
 
 class Disk(ResourceBase):
+    """Fields of Disk:
+        label: str
+        size: int (Byte)
+        (opt)avail: int (Byte)
+    """
     pass
 
 
-class Partition(ResourceBase):
+class Partition(Disk):
     pass
 
 

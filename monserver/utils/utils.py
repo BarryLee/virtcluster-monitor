@@ -6,10 +6,12 @@ import fcntl
 import struct
 import threading
 import time
+import logging
 
+logger = logging.getLogger('monserver.utils.utils')
 
 __all__ = ["get_ip_address", "decode", "encode", "get_from_dict", 
-           "put_to_dict", "threadinglize", "scheduled_task", "myprint"]
+           "put_to_dict", "threadinglize", "scheduled_task", "myprint", "rpc_formalize"]
 
 current_dir = lambda f: os.path.dirname(os.path.abspath(f))
 
@@ -143,4 +145,16 @@ def scheduled_task(procedure, tname=None, isdaemon=True,
         t.start()
     return schedule
 
- 
+
+def rpc_formalize(errmsg=None):
+    logger.debug('test')
+    def wrapper(func):
+        def f(*args, **kwargs):
+            try:
+                res = func(*args, **kwargs)
+                return [True, res]
+            except Exception, e:
+                logger.exception('')
+                return [False, errmsg or str(e)]
+        return f
+    return wrapper
