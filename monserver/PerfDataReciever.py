@@ -44,8 +44,8 @@ class DRRequestHandler(BaseRequestHandler):
             host_obj.last_arrival = time.time()
             self.model_int.close()
             data = decode(data)
-            for evt in self.produceEvent(host_id, data):
-                print self.conn.sendEvent(evt)
+            #for evt in self.produceEvent(host_id, data):
+            #    self.conn.sendEvent(evt)
             self.data_store_handler.onDataArrival(host_id, data)
         except KeyError, e:
             # TODO 

@@ -30,7 +30,9 @@ class MonServer(object):
         platform_info = decode(msg)
         client_ip = get_request_data().client_address[0]
         logger.debug(client_ip)
-        return register(client_ip, platform_info)
+        hostobj = register(client_ip, platform_info)
+        logger.info("%s %s(%s) registered" % (hostobj.rtype, hostobj.id, client_ip))
+        return hostobj.id
 
     @rpc_formalize()
     def howru(self):

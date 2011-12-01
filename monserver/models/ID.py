@@ -1,6 +1,10 @@
 
+import logging
 import socket
 import resources
+from monserver.VIMBroker import VIM
+
+logger = logging.getLogger('monserver.models.ID')
 
 def host_id(ip):
     """use hostname as host's id"""
@@ -18,7 +22,12 @@ def host_id(ip):
 def vm_id(ip):
     """Get vm' id from VIM, otherwise use its ip.
     """
-    return ip
+    vmid = getvmidbyip(ip)
+    if vmid is not None:
+        return vmid
+    else:
+        logger.info('unmanaged vm %s' % ip)
+        return ip
 
 def get_id(hostobj):
     if isinstance(hostobj, resources.Host):

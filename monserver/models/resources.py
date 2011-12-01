@@ -35,6 +35,7 @@ class Host(ResourceBase):
         #for k, v in extrainfo:
             #setattr(self, k, v)
         self.id = ID.get_id(self)
+        self.rtype = self.__class__.__name__
         self.__dict__.update(extrainfo)
 
 

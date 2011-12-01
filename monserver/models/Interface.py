@@ -151,8 +151,7 @@ class Interface(object):
         session.setResource("active", host.ip, host)
         #session.root._p_changed = 1
         session.commit()
-        logger.info("%s(%s) signed in" % (host.id, host.ip))
-        return host.id        
+        return host        
 
     def hostMetricConf(self, host_id):
         session = self.session

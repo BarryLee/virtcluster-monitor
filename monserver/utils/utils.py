@@ -147,7 +147,6 @@ def scheduled_task(procedure, tname=None, isdaemon=True,
 
 
 def rpc_formalize(errmsg=None):
-    logger.debug('test')
     def wrapper(func):
         def f(*args, **kwargs):
             try:
