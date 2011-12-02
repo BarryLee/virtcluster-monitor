@@ -7,7 +7,7 @@ from utils import parent_dir
 DEFAULT_CONFIG_FILE = parent_dir(__file__) + os.path.sep + 'serverrc'
 
 
-def load_config(confpath):
+def load_config(confpath=DEFAULT_CONFIG_FILE):
     exec(compile(open(confpath).read(), confpath, 'exec'))
     return locals()
 

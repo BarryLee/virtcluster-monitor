@@ -36,9 +36,11 @@ logfile = '/tmp/monserver.log'
 # if the server doesn't recieve data from a agent for this long,
 # it considers the agent down. (in seconds)
 # this value must be larger than the whole retry time of agent
-agent_timeout = 300
+agent_timeout = 45
 
-check_alive_interval = 60
+check_alive_interval = 15
 
 
 cache_size = 10000
+
+agent_port = 20070

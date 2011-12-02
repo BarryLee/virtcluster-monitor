@@ -1,6 +1,8 @@
 import os.path
 import sys
 import time
+import pdb
+import copy
 
 ###############################################################
 # temporary solution for importing upper level modules/packages
@@ -14,13 +16,11 @@ if par_dir not in sys.path:
 from ModelDB import ModelDB, ModelDBSession, ModelDBException
 from resources import Host, VM, CPU, Disk, Partition, NetworkInterface
 import ID
-from utils.load_config import load_config
 from utils.utils import decode
 from utils.get_logger import get_logger
 
 logger = get_logger("models.interface")
 
-#config = load_config()
 cur_dir = _(__file__)
 
 
@@ -37,6 +37,11 @@ def host_metric_conf(host_id):
     interface.close()
     return ret
 
+def host_metric_list(host_id):
+    interface = Interface()
+    ret = interface.hostMetricList(host_id)
+    interface.close()
+    return ret
 
 def check_alive(timeout):
     interface = Interface()
@@ -141,8 +146,10 @@ class Interface(object):
                     network_interface.update({"name": ifn})
                     host.addOne("network_interfaces", ifn, network_interface)
         # end if
-
+        #pdb.set_trace()
         host.metric_list = info["metric_groups"]
+        if info.has_key('port'):
+            host.port = info['port']
 
         host.last_arrival = time.time()
 
@@ -160,6 +167,25 @@ class Interface(object):
         assert host_obj is not None
         return host_obj.metric_list
 
+    def hostMetricList(self, host_id):
+        metric_conf = self.hostMetricConf(host_id)
+        metric_grps = {}
+        for metric_conf_group in metric_conf:
+            mgrp = metric_grps.setdefault(metric_conf_group['name'], [])
+            metrics = metric_conf_group['metrics']
+            if metric_conf_group.has_key('instances'):
+                for insargs in metric_conf_group['instances']:
+                    if not isinstance(insargs['device'], list):
+                        prefix = '%s-' % insargs['device']
+                        for m in metrics:
+                            nm = m.copy()
+                            nm['name'] = prefix + m['name']
+                            mgrp.append(nm)
+                    else:
+                        mgrp.extend(metrics)
+            else:
+                mgrp.extend(metrics)
+        return metric_grps
 
     def getActiveHost(self, ip):
         session = self.session
@@ -190,7 +216,7 @@ class Interface(object):
         now = time.time()
         toberemoved = []
         for ip, host_obj in active_hosts.iteritems():
-            logger.debug("%d, %d, %d" % (now, host_obj.last_arrival, timeout))
+            #logger.debug("%d, %d, %d" % (now, host_obj.last_arrival, timeout))
             if now - host_obj.last_arrival > timeout:
                 toberemoved.append(ip)
         if len(toberemoved):
@@ -223,6 +249,12 @@ remove it from session""" % (host_obj.id, ip, timeout))
                 self.delHost(host_type, id)
                 logger.info("record %s:%s expired and deleted" 
                             % (host_type, id))
+            # end for
+        # end if
+    
+    def getHost(self, host_id):
+        #pdb.set_trace()
+        return self.session.getResource("all", host_id)
 
 
 

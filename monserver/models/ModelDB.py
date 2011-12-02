@@ -7,7 +7,14 @@ from monserver.includes.singletonmixin import Singleton
 
 
 class ModelDBException(Exception):
-    pass
+    """errno:
+        0 -- undefined
+        1 -- no such record
+    """
+    def __init__(self, errmsg, errno=0):
+        super(ModelDBException, self).__init__(errmsg, errno)
+        self.errmsg = errmsg
+        self.errno = errno
 
 
 class ModelDB(Singleton):
@@ -81,14 +88,14 @@ class ModelDBSession(object):
                 return self.root[res_type][res_key]
         except KeyError, e:
             #return None
-            raise ModelDBException, "get resource %s failed" % e.args[0]
+            raise ModelDBException("no resource has key %s" % e.args[0], 1)
 
 
     def delResource(self, res_type, res_key):
         try:
             self.root[res_type].pop(res_key)
         except KeyError, e:
-            raise ModelDBException, "delete resource %s failed" % e.args[0]
+            raise ModelDBException("no resource has key %s" % e.args[0], 1)
 
 
     def commit(self):
