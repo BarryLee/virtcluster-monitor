@@ -1,8 +1,10 @@
 import rrdtool
 import os
 
-
-#rrdtool.first = lambda x: int(os.popen('rrdtool first %s' % x).read())
+native_module = True
+if not hasattr(rrdtool, 'first'):
+    native_module = False
+    rrdtool.first = lambda x: int(os.popen('rrdtool first %s' % x).read())
 
 
 def rrdcreate_wrapper(rrd_db, start=-10, step=300, DSs=[], RRAs=[]):
@@ -49,9 +51,9 @@ def rrdfetch_wrapper(rrd_db, cf, resolution, start=-3600, end=-1):
     #print start, end
     # adjust the start/end time to match the result with the args
     #start = int(start) - int(resolution)
-    #end = int(end) - int(resolution)    # comment this line if we are using the native
-                                        # python binding(rrdtoolmodule.so)
-    
+    if not native_module: # fix for pyrrdtool package
+        end = int(end) - int(resolution)        
+
     data = rrdtool.fetch(rrd_db, cf, "-r", str(resolution), "-e", str(end), \
                          "-s", str(start))
     #logger.debug(r'rrdtool.fetch("%s", "%s", "-r", "%s", "-e", "%s", "-s", "%s")' %\
