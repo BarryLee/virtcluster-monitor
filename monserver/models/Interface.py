@@ -18,6 +18,8 @@ from resources import Host, VM, CPU, Disk, Partition, NetworkInterface
 import ID
 from utils.utils import decode
 from utils.get_logger import get_logger
+from monserver.RRD.cleanup import rmrrds
+from monserver.VIMBroker import VIM
 
 logger = get_logger("models.interface")
 
@@ -240,15 +242,20 @@ remove it from session""" % (host_obj.id, ip, timeout))
         now = time.time()
         toberemoved = []
 
-        for id, host in hosts.iteritems():
+        for hid, host in hosts.iteritems():
             if now - host.last_arrival > expire_time:
-                toberemoved.append(id)
+                if host_type == 'VM':
+                    # vm is still alive, only not sending
+                    if VIM.get_vms_info(hid) is not None:
+                        continue
+                toberemoved.append(hid)
 
         if len(toberemoved):
-            for id in toberemoved:
-                self.delHost(host_type, id)
+            for hid in toberemoved:
+                self.delHost(host_type, hid)
                 logger.info("record %s:%s expired and deleted" 
-                            % (host_type, id))
+                            % (host_type, hid))
+                rmrrds(hid)
             # end for
         # end if
     

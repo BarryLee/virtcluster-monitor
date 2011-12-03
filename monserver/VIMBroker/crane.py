@@ -8,6 +8,13 @@ def get_vms_info():
         raise VIMException, '%s' % ([state, vmsinfo])
     return vmsinfo
 
+def get_vm_info(vmid):
+    vmsinfo = get_vms_info()
+    for vminfo in vmsinfo:
+        if vminfo['guid'] == vmid:
+            return vminfo
+    return None
+
 def getvminfobyip(ip):
     suc, vmsinfo = cloud.get_vms_info()
     if not suc:

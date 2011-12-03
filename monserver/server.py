@@ -145,6 +145,12 @@ def main():
                    0, -1, check_alive_interval)(agent_timeout)
     logger.info("check_alive started...")
 
+    expire_time = global_config.get('expire_time')
+    check_expire_interval = global_config.get('check_expire_interval')
+    scheduled_task(check_expire, "check_expire", True,
+                   0, -1, check_expire_interval)(expire_time)
+    logger.info("check_expire started...")
+
     while True:
         #myprint(threading.enumerate())
         sleep(60)

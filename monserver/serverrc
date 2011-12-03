@@ -7,9 +7,9 @@
 #
 server_ip = '0.0.0.0'
 # rpc server port number
-rpc_port = 20060
+rpc_port = 20065
 # data server port number
-ds_port = 20060
+ds_port = 20065
 # event server port number
 es_port = 20062
 srv_port = 20063
@@ -21,7 +21,7 @@ cache_server_port = 20061
 # RoundRobinDatabase configs
 #
 # root directory for rrd files
-RRD_root = '/tmp/rrds'
+RRD_root = '/dev/shm/rrds'
 
 
 # the output will be redirected to this file(when demonized)
@@ -40,6 +40,8 @@ agent_timeout = 45
 
 check_alive_interval = 15
 
+expire_time = 3600
+check_expire_interval = 3600
 
 cache_size = 10000
 
