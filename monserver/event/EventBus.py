@@ -3,12 +3,15 @@ import time
 from Queue import Queue
 from SocketServer import StreamRequestHandler, ThreadingTCPServer
 
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+#from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
+from ThreadingXMLRPCServer import ThreadingXMLRPCServer
 
 from monserver.includes.Singleton import MetaSingleton
 from monserver.utils.utils import threadinglize
 #from monserver.utils.get_logger import get_logger
 import Event
+
+__all__ = ['EventBus', 'subscribe', 'on_event_arrival']
 
 logger = logging.getLogger("event.EventBus")
 #logger = get_logger("event.EventBus")
@@ -27,7 +30,7 @@ class _RequestHandler(StreamRequestHandler):
             evt = Event.loads(req)
             on_event_arrival(evt)
             self.wfile.write(0)
-        except Event.error:
+        except Event.EventException:
             logger.exception("Invalid event format")
             self.wfile.write(1)
 
@@ -41,7 +44,7 @@ class EventBus(object):
     def __init__(self, event_server_addr, service_server_addr, 
                  EventServerClass=_Server, 
                  RequestHandlerClass=_RequestHandler,
-                 ServiceServerClass=SimpleJSONRPCServer):
+                 ServiceServerClass=ThreadingXMLRPCServer):
         self._event_server_addr = event_server_addr
         self._service_server_addr = service_server_addr
         self._queue = Queue()
@@ -62,19 +65,19 @@ class EventBus(object):
     def halt(self):
         self.cleanup()
 
-    def handleSubscribe(self, etype, subscriber, entity=None, match=None):
+    def handleSubscribe(self, etype, subscriber, target=None, match=None):
         self._subscribers.setdefault(etype, {})
-        entity = str(entity) if entity is not None else '*'
-        subscribers = self._subscribers[etype].setdefault(entity, set())
+        target = str(target) if target is not None else '*'
+        subscribers = self._subscribers[etype].setdefault(target, set())
         assert callable(subscriber)
         #if name is None: name = subscriber.__name__
         if match:
             setattr(subscriber, '__match__', match)
         subscribers.add(subscriber)
 
-    def handleUnsubscribe(self, etype, subscriber, entity=None):
+    def handleUnsubscribe(self, etype, subscriber, target=None):
         try:
-            self._subscribers[etype][str(entity)].remove(subscriber)
+            self._subscribers[etype][str(target)].remove(subscriber)
         except KeyError, e:
             logger.exception()
 
@@ -110,31 +113,36 @@ class EventBus(object):
 
     def route(self, evt):
         #print 'route'
-        entity = str(getattr(evt, 'entity', '*'))
+        target = str(getattr(evt, 'target', '*'))
         #print evt.eventType
         #print self._subscribers
-        subscriber_list = self._subscribers[evt.eventType][entity]
+        subscriber_list = self._subscribers[evt.eventType][target]
         #print subscriber_list
         for s in subscriber_list:
-            if hasattr(s, '__match__'):
-                if s.__match__(evt):
+            try:
+                if hasattr(s, '__match__'):
+                    if s.__match__(evt):
+                        s(evt)
+                else:
                     s(evt)
-            else:
-                s(evt)
+            except Exception, e:
+                logger.exception('')
+                print e
+                continue
 
     def dispatch(self):
         #logger.info("Starting dispatcher")
         while self._RUNNING:
             evt = self._queue.get(True)
-            threadinglize(self.route)(evt)
+            self.route(evt)
 
     def cleanup(self):
         self._RUNNING = False
         self.shutdownEventServer()
         self.shutdownServiceServer()
 
-def subscribe(etype, subscriber, entity=None, match=None):
-    EventBus().handleSubscribe(etype, subscriber, entity, match)
+def subscribe(etype, subscriber, target=None, match=None):
+    EventBus().handleSubscribe(etype, subscriber, target, match)
 
 def on_event_arrival(evt):
     EventBus().onEventArrival(evt)
@@ -152,10 +160,10 @@ if __name__ == '__main__':
         print 'c1: %s' % evt.eventType
 
     def consumer2(evt):
-        print 'c2: %s:%s:%s:%s' % (evt.occurTime, evt.entity, evt.metric, evt.val)
+        print 'c2: %s:%s:%s:%s' % (evt.occurTime, evt.target, evt.metric, evt.val)
 
-    subscribe('PerfDataArrival', consumer1, entity='xxx')
-    subscribe('PerfDataArrival', consumer2, entity='localhost')
+    subscribe('PerfDataArrival', consumer1, target='xxx')
+    subscribe('PerfDataArrival', consumer2, target='localhost')
     #subscribe('RedAlarm', consumer1)
     #subscribe('RedAlarm', consumer2)
     #subscribe('AlienInvade', consumer1)

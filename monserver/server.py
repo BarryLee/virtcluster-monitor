@@ -156,8 +156,8 @@ def main():
         sleep(60)
 
 
-def bye():
-    logger.info('bye')
+#def bye():
+    #logger.info('bye')
 
 
 if __name__ == "__main__":

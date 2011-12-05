@@ -10,11 +10,8 @@ server_ip = '0.0.0.0'
 rpc_port = 20065
 # data server port number
 ds_port = 20065
-# event server port number
-es_port = 20062
-srv_port = 20063
 
-cache_server_port = 20061
+#cache_server_port = 20061
 
 
 #
@@ -24,8 +21,11 @@ cache_server_port = 20061
 RRD_root = '/dev/shm/rrds'
 
 
-# the output will be redirected to this file(when demonized)
+# the standard output will be redirected to this file(when demonized)
 ofile = '/tmp/monserver.out'
+
+# the standard error will be redirected to this file(when demonized)
+efile = '/tmp/monserver.out'
 
 # the pid file for demonizing
 pfile = '/tmp/monserver.pid'
@@ -40,9 +40,23 @@ agent_timeout = 45
 
 check_alive_interval = 15
 
+# expire time (in seconds)
 expire_time = 3600
+
 check_expire_interval = 3600
 
-cache_size = 10000
+#cache_size = 10000
 
+# default rpc port of agent
 agent_port = 20070
+
+#
+# event configs
+#
+# event server port number
+evt_port = 20062
+evt_srv_port = 20063
+
+# event db conf path
+event_db_conf = 'event/eventstore.conf'
+
