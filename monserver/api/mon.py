@@ -1,7 +1,7 @@
 import xmlrpclib
 
-from RRD.RRDHandler import RRDHandler
-from utils.load_config import load_config
+from monserver.RRD.RRDHandler import RRDHandler
+from monserver.utils.load_config import load_config
 
 config = load_config()
 rrd_handler = RRDHandler.getInstance(config.get('RRD_root'))

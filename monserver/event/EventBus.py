@@ -41,6 +41,8 @@ class EventBus(object):
 
     __metaclass__ = MetaSingleton
 
+    _ALL = '*'
+
     def __init__(self, event_server_addr, service_server_addr, 
                  EventServerClass=_Server, 
                  RequestHandlerClass=_RequestHandler,
@@ -67,7 +69,7 @@ class EventBus(object):
 
     def handleSubscribe(self, etype, subscriber, target=None, match=None):
         self._subscribers.setdefault(etype, {})
-        target = str(target) if target is not None else '*'
+        target = str(target) if target is not None else self._ALL
         subscribers = self._subscribers[etype].setdefault(target, set())
         assert callable(subscriber)
         #if name is None: name = subscriber.__name__
@@ -111,14 +113,8 @@ class EventBus(object):
     def onEventArrival(self, evt):
         self._queue.put(evt)
 
-    def route(self, evt):
-        #print 'route'
-        target = str(getattr(evt, 'target', '*'))
-        #print evt.eventType
-        #print self._subscribers
-        subscriber_list = self._subscribers[evt.eventType][target]
-        #print subscriber_list
-        for s in subscriber_list:
+    def _notifyAll(self, evt, subscribers):
+        for s in subscribers:
             try:
                 if hasattr(s, '__match__'):
                     if s.__match__(evt):
@@ -129,6 +125,24 @@ class EventBus(object):
                 logger.exception('')
                 print e
                 continue
+
+    def route(self, evt):
+        #print 'route'
+        #print evt.eventType
+        #print self._subscribers
+        etype = evt.eventType
+        if not self._subscribers.has_key(etype):
+            logger.info('unsubscribed event type: %s' % etype)
+            return
+        self._notifyAll(evt, self._subscribers[etype][self._ALL])
+
+        target = str(getattr(evt, 'target'))        
+        if target is not None:
+            if not self._subscribers.has_key(target):
+                logger.debug('unsubscribed target %s for event %s' % \
+                        (target, etype))
+                return
+            self._notifyAll(evt, self._subscribers[etype][target])
 
     def dispatch(self):
         #logger.info("Starting dispatcher")

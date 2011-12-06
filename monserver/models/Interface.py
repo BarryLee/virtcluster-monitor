@@ -20,6 +20,8 @@ from utils.utils import decode
 from utils.get_logger import get_logger
 from monserver.RRD.cleanup import rmrrds
 from monserver.VIMBroker import VIM
+from monserver.api.event import send_event
+from event_defs import *
 
 logger = get_logger("models.interface")
 
@@ -100,7 +102,7 @@ class Interface(object):
             host = VM(ip)
         else:
             host = Host(ip)
-        logger.debug("create record of %s:%s" % (host.id, ip))
+        logger.debug("create record for %s:%s" % (host.id, ip))
 
         #host.is_virtual = is_virtual
         host.virt_type = virt_type
@@ -226,6 +228,7 @@ class Interface(object):
                 host_obj = active_hosts.pop(ip)
                 logger.warning("""no msg from %s(%s) for more than %d seconds,\
 remove it from session""" % (host_obj.id, ip, timeout))
+                send_event(HostInactive(host_obj.id, ip=ip))
             self.session.commit()                           
 
 

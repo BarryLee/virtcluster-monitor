@@ -1,6 +1,7 @@
 import xmlrpclib
 #import itertools
 import logging
+import time
 
 import ZODB.config
 from BTrees.OOBTree import OOBTree
@@ -8,7 +9,7 @@ from BTrees.IOBTree import IOBTree
 
 import Event
 from monserver.models.ModelDB import ModelDBException as EventDBException, ModelDB, ModelDBSession
-from monserver.api import get_host_state
+from monserver.api.mon import get_host_state
 
 logger = logging.getLogger('event.EventDB')
 
@@ -40,15 +41,33 @@ class EventDBSession(ModelDBSession):
         if not self.root[target].has_key(etype):
             self.root[target][etype] = IOBTree()
 
-        last_evt = self.probe(target, etype, event.occurTime - event.getWinSize())
+        #last_evt = self.probe(target, etype, event.occurTime - event.getWinSize())
 
-        if last_evt is None:
-            self.root[target][etype][event.occurTime] = event
-        else:
-            last_evt = self.merge(last_evt, event)
-            self.root[target][etype][last_evt.occurTime] = last_evt
+        #if last_evt is None:
+            #self.root[target][etype][event.occurTime] = event
+        #else:
+            #last_evt = self.merge(last_evt, event)
+            #self.root[target][etype][last_evt.occurTime] = last_evt
+        same_evts = (t for t,e in 
+                self.root[target][etype].iteritems(
+                    event.occurTime-event.getWinSize(), int(time.time())) 
+                if event.mergable(e))
+        for t in same_evts:
+            e = self.root[target][etype].pop(t)
+            e = self.merge(e, event)
+            self.root[target][etype][e.occurTime] = e
+            return
+        self.root[target][etype][event.occurTime] = event
 
     def load(self, selector):
+        try:
+            return list(self.delayedLoad(selector))
+        except KeyError, e:
+            raise EventDBException(str(e), 1)
+        except ValueError, e:
+            raise EventDBException(str(e), 1)
+
+    def delayedLoad(self, selector):
         target = selector.get('target')
         etype = selector.get('etype')
         from_t = selector.get('from')
@@ -61,17 +80,21 @@ class EventDBSession(ModelDBSession):
             if target is None and etype is None:
                 res = (e for target_elems in self.root.itervalues()
                             for etype_elems in target_elems.itervalues()
-                            for e in etype_elems.itervalues(from_t, to_t))
+                                for e in etype_elems.itervalues(from_t, to_t)
+                                    if _filter(e))
             elif etype is None:
                 res = (e for etype_elems in self.root[target].itervalues()
-                            for e in etype_elems.itervalues(from_t, to_t))
+                            for e in etype_elems.itervalues(from_t, to_t)
+                                if _filter(e))
             elif target is None:
                 res = (e for target_elems in self.root.itervalues() if target_elems.has_key(etype)
-                            for e in target_elems[etype].itervalues(from_t, to_t))
+                            for e in target_elems[etype].itervalues(from_t, to_t)
+                                if _filter(e))
             else:
-                res = self.root[target][etype].itervalues(from_t, to_t)
+                res = (e for e in self.root[target][etype].itervalues(from_t, to_t)
+                            if _filter(e))
 
-            return [e for e in res if _filter(e)]
+            return res
         except KeyError, e:
             raise EventDBException(str(e), 1)
     

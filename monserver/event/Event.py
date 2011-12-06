@@ -25,6 +25,9 @@ class Event(Persistent):
     def mergable(self, evt):
         return True
 
+    def info(self):
+        return self.__dict__
+
 def loads(event_dump):
     try:
         edict = json.loads(event_dump)
