@@ -46,7 +46,7 @@ class ResourceBase(Persistent, Relation):
 
 class Host(ResourceBase):
 
-    _noexpose = ['metric_list']
+    _noexpose = ['metric_list', 'thresholds']
 
     def __init__(self, ip, **extrainfo):
         #self.hostname = hostname
@@ -55,6 +55,7 @@ class Host(ResourceBase):
             #setattr(self, k, v)
         self.id = ID.get_id(self)
         self.rtype = self.__class__.__name__
+        self.thresholds = []
         self.__dict__.update(extrainfo)
 
     def __str__(self):
@@ -64,17 +65,23 @@ class Host(ResourceBase):
         ret = self._copy(self.__dict__)
         return ret
 
-    def _copy(self, d):
-        ret = {}
-        for k,v in d.items():
-            if k == 'metric_list':
-                continue
-            elif isinstance(v, ResourceBase):
-                v = v.info()
-            elif type(v) is dict:
-                v = self._copy(v)
-            ret[k] = v
-        return ret
+    #def _copy(self, d):
+        #ret = {}
+        #for k,v in d.items():
+            #if k == 'metric_list':
+                #continue
+            #elif isinstance(v, ResourceBase):
+                #v = v.info()
+            #elif type(v) is dict:
+                #v = self._copy(v)
+            #ret[k] = v
+        #return ret
+
+    def addThreshold(self, tid):
+        self.thresholds.append(tid)
+
+    def rmThreshold(self, tid):
+        self.thresholds.remove(tid)
 
 class VM(Host): 
     pass    

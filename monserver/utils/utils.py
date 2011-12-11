@@ -151,6 +151,7 @@ def rpc_formalize(errmsg=None):
         def f(*args, **kwargs):
             try:
                 res = func(*args, **kwargs)
+                if res is None: res = ''
                 return [True, res]
             except Exception, e:
                 logger.exception('')

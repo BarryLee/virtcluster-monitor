@@ -13,3 +13,11 @@ class HostInactive(Event):
         self.msg = "Host %s(%s) state changed to inactive" % (self.target, self.ip)
 
 
+class HostDel(Event):
+
+    def __init__(self, hostId, **econtent):
+        super(HostDel, self).__init__(hostId,
+                                      'HostDel',
+                                      None,
+                                      **econtent)
+        self.msg = "Host %s deleted" % (self.target,)

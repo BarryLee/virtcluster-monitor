@@ -29,7 +29,7 @@ def rrdfetch_wrapper(rrd_db, cf, resolution, start=-3600, end=-1):
     assert type(start) is int
     assert type(end) is int
     
-    assert start < end
+    #assert start < end
     #print 'start is %s, end is %s' % (start, end) 
 
     last = rrdtool.last(rrd_db)
@@ -37,7 +37,7 @@ def rrdfetch_wrapper(rrd_db, cf, resolution, start=-3600, end=-1):
 
     if start < 0:
         start = last + start
-    if end < 0:
+    if end <= 0:
         end = last + end
 
     if start >= last or end <= first:

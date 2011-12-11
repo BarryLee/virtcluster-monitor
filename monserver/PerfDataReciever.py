@@ -5,30 +5,28 @@ from SocketServer import BaseRequestHandler, ThreadingUDPServer
 import time
 import logging
 
-#from models.interface import getidbyip 
 from models.Interface import Interface
-#from utils.get_logger import get_logger
 from utils.utils import decode
-from event.connection import Connection
+from api.event import send_event
 from event.Event import Event
 
 #logger = get_logger('PerfDateReciever')
 logger = logging.getLogger('PerfDateReciever')
 
-class PerfDataArrivalEvent(Event):
+class PerfDataArrival(Event):
 
     def __init__(self, occur_t, host, metric, val):
-        super(PerfDataArrivalEvent, self).__init__('PerfDataArrival', occur_t)
-        self.entity = host
+        super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occur_t)
         self.metric = metric
         self.val = val
+        #self.detectTime = int(time.time()*1e6)
 
 class DRRequestHandler(BaseRequestHandler):
 
     def __init__(self, request, client_address, server):
         self.data_store_handler = server.data_store_handler
         self.model_int = Interface()
-        self.conn = Connection(server.event_server_address)
+        #self.conn = Connection(server.event_server_address)
         BaseRequestHandler.__init__(self, request, client_address, server)
 
 
@@ -42,10 +40,11 @@ class DRRequestHandler(BaseRequestHandler):
             host_obj = self.model_int.getActiveHost(ip)
             host_id = host_obj.id
             host_obj.last_arrival = time.time()
+            self.model_int.commit()
             self.model_int.close()
             data = decode(data)
-            #for evt in self.produceEvent(host_id, data):
-            #    self.conn.sendEvent(evt)
+            for evt in self.produceEvent(host_id, data):
+                send_event(evt)
             self.data_store_handler.onDataArrival(host_id, data)
         except KeyError, e:
             # TODO 
@@ -60,7 +59,7 @@ class DRRequestHandler(BaseRequestHandler):
         t = data['timestamp']
         device = data.get('device','')
         for m,v in data['val'].items():
-            yield PerfDataArrivalEvent(t, host, self.metricName(device,m), v)
+            yield PerfDataArrival(t, host, self.metricName(device,m), v)
         
     def metricName(self, device, metric):
         if len(device):
@@ -83,12 +82,12 @@ class DRRequestHandler(BaseRequestHandler):
 class DataReciever(ThreadingUDPServer):
 
     def __init__(self, server_address, data_store_handler, 
-                 event_server_address,
+                 #event_server_address,
                  RequestHandlerClass=DRRequestHandler,
                  bind_and_activate=True):
         ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
         self.data_store_handler = data_store_handler
-        self.event_server_address = event_server_address
+        #self.event_server_address = event_server_address
 
 
     def verify_request(self, request, client_address):

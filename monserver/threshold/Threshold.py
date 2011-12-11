@@ -1,77 +1,94 @@
+import pdb
 import threading
 from time import time
 
+from persistent import Persistent
+
 from monserver.event.Event import Event
+from api.event import send_event
+
+__all__ = ["Threshold", "CompositeThreshold"]
+
+class ThresholdViolation(Event):
+    
+    def __init__(self, host, tid):
+        super(ThresholdViolation, self).__init__(target=host)
+        self.tid = tid
+        self.merge_key = tid
+
+    #def mergable(self, evt):
+        #pdb.set_trace()
+        #return self.tid == evt.tid
 
 class Threshold(object):
 
-    def __init__(self, conn, host, metric, ttype, tval, callback=None):
-        self.conn = conn
+    def __init__(self, tid, host, metric, tval, ttype, callback=None):
+        self.tid = tid
         self.host = host
         self.metric = metric
         self.threshold = tval
         # 0 refers to upper bound, 1 refers to lower bound
         if ttype == 0:
-            self.matcher = lambda x: x > self.threshold
+            self.test = lambda x: x > self.threshold
         elif ttype == 1:
-            self.matcher = lambda x: x < self.threshold
+            self.test = lambda x: x < self.threshold
 
         self.callback = callback
         self.etype = 'ThresholdViolation'
 
-    def composeEvent(self, v):
-        return Event(self.etype, entity=self.host, metric=self.metric,\
-                    threshold=self.threshold, val=v)
-        
+    def produceEvent(self, v):
+        return ThresholdViolation(self.host, self.tid)       
+
     def __call__(self, evt):
         ret = 0
         if evt.metric == self.metric:
-            if self.matcher(evt.val):
+            if self.test(evt.val):
                 ret = 1
-                self.conn.sendEvent(self.composeEvent(evt.val))
+                send_event(self.produceEvent(evt.val))
                 if self.callback:
                     self.callback(evt)
         return ret
 
 class CompositeThreshold(object):
 
-    _lock = threading.RLock()
+    #_lock = threading.RLock()
 
-    def __init__(self, conn, window, thresholds=[], callback=None):
-        self.conn = conn
+    def __init__(self, window, thresholds=[], callback=None):
         self.thresholds = thresholds
+        self.hosts = set([t.host for t in thresholds])
         self.alerts = [0 for i in thresholds]
-        self.matcher = lambda : reduce(lambda x,y: x*y, self.alerts)
+        self.test = lambda : reduce(lambda x,y: x*y, self.alerts)
         self.win = window
         self.etype = 'ThresholdViolation'
         self.last = 0
 
-    def addThreshold(self, t):
-        self.thresholds.append(t)
-        self.alerts.append(0)
+    #def addThreshold(self, t):
+        #self.thresholds.append(t)
+        #self.alerts.append(0)
 
-    def composeEvent(self):
+    def produceEvent(self):
         return Event(self.etype)
 
     def __call__(self, evt):
         ret = 0
         try:
-            self._lock.acquire()
+            #self._lock.acquire()
             t = time()
             if t-self.last > self.win:
-                self.alerts = [0] * len(self.thresholds)
+                for i,j in enumerate(self.alerts):
+                    self.alerts[i] = 0
 
             for i,threshold in enumerate(self.thresholds):
                 if evt.metric == threshold.metric and\
-                   threshold.matcher(evt.val):
+                   threshold.test(evt.val):
                     self.last = t
                     self.alerts[i] = 1
 
-            if self.matcher(self.alerts):
+            if self.test(self.alerts):
                 ret = 1
-                self.conn.sendEvent(self.composeEvent())
+                send_event(self.produceEvent())
                 if self.callback:
                     self.callback(evt)
         finally:
-            self._lock.release()
+            #self._lock.release()
             return ret

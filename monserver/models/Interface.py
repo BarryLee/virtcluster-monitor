@@ -20,7 +20,7 @@ from utils.utils import decode
 from utils.get_logger import get_logger
 from monserver.RRD.cleanup import rmrrds
 from monserver.VIMBroker import VIM
-from monserver.api.event import send_event
+from monserver.api.event import send_event, unset_threshold
 from event_defs import *
 
 logger = get_logger("models.interface")
@@ -87,8 +87,11 @@ class Interface(object):
         self.session = self.modeldb.openSession()
 
 
-    def close(self):
+    def commit(self):
         self.session.commit()
+
+    def close(self):
+        #self.session.commit()
         self.session.close()
 
 
@@ -96,13 +99,22 @@ class Interface(object):
         is_virtual = info.get("virtual")
         virt_type = info.get("virt_type")
 
-        session = self.session
-
         if is_virtual:
             host = VM(ip)
         else:
             host = Host(ip)
         logger.debug("create record for %s:%s" % (host.id, ip))
+
+        if self.session.hasResource(host.id):
+            hostobj = self.getHost(host.id)
+            #self.delHost(host.rtype, host.id)
+            for tid in hostobj.thresholds:
+                unset_threshold(tid)
+            self.session.delResource(host.rtype, host.id)
+            self.session.delResource("all", host.id)
+            logger.info("unregister host %s" % host.id)
+            #self.close()
+            #self.open()
 
         #host.is_virtual = is_virtual
         host.virt_type = virt_type
@@ -157,11 +169,11 @@ class Interface(object):
 
         host.last_arrival = time.time()
 
-        session.setResource("all", host.id, host)
-        session.setResource(host.__class__.__name__, host.id, host)
-        session.setResource("active", host.ip, host)
+        self.session.addResource("all", host.id, host)
+        self.session.addResource(host.__class__.__name__, host.id, host)
+        self.session.addResource("active", host.ip, host)
         #session.root._p_changed = 1
-        session.commit()
+        self.session.commit()
         return host        
 
     def hostMetricConf(self, host_id):
@@ -204,10 +216,6 @@ class Interface(object):
     def getIDByIP(self, ip):
         return self.getActiveHost(ip).id
 
-            
-    def setLastArrival(self, ip, timestamp):
-        self.getActiveHost(ip).last_arrival = timestamp
-
     
     def checkAlive(self, timeout):
         active_hosts = self.session.root.get("active", None)
@@ -233,10 +241,14 @@ remove it from session""" % (host_obj.id, ip, timeout))
 
 
     def delHost(self, host_type, host_id):
+        logger.debug("delete host %s" % host_id)
+        hostobj = self.getHost(host_id)
+        for tid in hostobj.thresholds:
+            unset_threshold(tid)
         self.session.delResource(host_type, host_id)
         self.session.delResource("all", host_id)
         self.session.commit()
-
+        #send_event(HostDel(host_id))
 
     def checkExpire(self, host_type, expire_time):
         hosts = self.session.root.get(host_type, None)
@@ -266,5 +278,6 @@ remove it from session""" % (host_obj.id, ip, timeout))
         #pdb.set_trace()
         return self.session.getResource("all", host_id)
 
-
+    def __del__(self):
+        self.close()
 

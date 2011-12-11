@@ -57,7 +57,7 @@ class MonServer(object):
         except ModelDBException, e:
             interface.close()
             if e.errno == 1:
-                return '%s is not registered' % hostID
+                raise Exception, '%s is not registered' % hostID
             else:
                 logger.exception('')
                 raise
@@ -78,12 +78,48 @@ class MonServer(object):
             return hostobj.info()
         except ModelDBException, e:
             if e.errno == 1:
-                return '%s is not registered' % hostID
+                raise Exception, '%s is not registered' % hostID
             else:
                 logger.exception('')
                 raise
         finally:
             interface.close()
+
+    @rpc_formalize()
+    def addThreshold(self, hostIDs, tid):
+        interface = Interface()
+        try:
+            for hostID in hostIDs:
+                hostobj = interface.getHost(hostID)
+                hostobj.addThreshold(tid)
+            interface.session.commit()
+            return 
+        except ModelDBException, e:
+            interface.session.abort()
+            logger.exception('')
+            raise
+        finally:
+            interface.close()
+
+    @rpc_formalize()
+    def rmHostThreshold(self, hostID, tid):
+        interface = Interface()
+        try:
+            hostobj = interface.getHost(hostID)
+            hostobj.rmThreshold(tid)
+            interface.session.commit()
+            return 
+        except ModelDBException, e:
+            if e.errno == 1:
+                raise Exception, '%s is not registered' % hostID
+            else:
+                logger.exception('')
+                raise
+        finally:
+            interface.close()
+
+    def getHostThreshold(self, hostID):
+        pass
 
 def bring_up_all_agents():
     interface = Interface()
@@ -122,6 +158,7 @@ def main():
     rpc_port = global_config.get("rpc_port")
     rpc_server = ThreadingXMLRPCServer((local_host, rpc_port),
                                        logRequests=False)
+    rpc_server.register_introspection_functions()
     #rpc_server.register_function(sign_in)
     #rpc_server.register_function(howru)
     rpc_server.register_instance(MonServer())
@@ -131,9 +168,10 @@ def main():
     rrd_root = global_config.get("RRD_root", "/dev/shm")    
     rrd_handler = RRDHandler.getInstance(rrd_root)
     ds_port = global_config.get("ds_port")
-    es_port = global_config.get("es_port")
-    data_server = DataReciever((local_host, ds_port), rrd_handler,\
-                               (local_host, es_port))
+    #es_port = global_config.get("es_port")
+    #data_server = DataReciever((local_host, ds_port), rrd_handler,\
+                               #(local_host, es_port))
+    data_server = DataReciever((local_host, ds_port), rrd_handler)
     threadinglize(data_server.serve_forever, "data_server")()
     logger.info("start data server on %s:%d" % (local_host, ds_port))
 

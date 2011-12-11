@@ -1,3 +1,4 @@
+import pdb
 import xmlrpclib
 #import itertools
 import logging
@@ -5,7 +6,7 @@ import time
 
 import ZODB.config
 from BTrees.OOBTree import OOBTree
-from BTrees.IOBTree import IOBTree
+from BTrees.LOBTree import LOBTree
 
 import Event
 from monserver.models.ModelDB import ModelDBException as EventDBException, ModelDB, ModelDBSession
@@ -39,7 +40,7 @@ class EventDBSession(ModelDBSession):
     
         etype = event.eventType
         if not self.root[target].has_key(etype):
-            self.root[target][etype] = IOBTree()
+            self.root[target][etype] = LOBTree()
 
         #last_evt = self.probe(target, etype, event.occurTime - event.getWinSize())
 
@@ -50,14 +51,23 @@ class EventDBSession(ModelDBSession):
             #self.root[target][etype][last_evt.occurTime] = last_evt
         same_evts = (t for t,e in 
                 self.root[target][etype].iteritems(
-                    event.occurTime-event.getWinSize(), int(time.time())) 
+                    (event.occurTime-event.getWinSize())*1000) 
                 if event.mergable(e))
+        # retrieve the first mergable event and merge
+        #pdb.set_trace()
         for t in same_evts:
             e = self.root[target][etype].pop(t)
-            e = self.merge(e, event)
-            self.root[target][etype][e.occurTime] = e
+            #pdb.set_trace()
+            #e = self.merge(e, event)
+            e.merge(event)
+            now = int(time.time()*1e3)
+            #self.root[target][etype][e.occurTime] = e
+            self.root[target][etype][now] = e
+            logger.debug("merge event: %s" % str(event))
             return
-        self.root[target][etype][event.occurTime] = event
+        now = int(time.time()*1e3)
+        self.root[target][etype][now] = event
+        logger.debug("save new event: %s" % str(event))
 
     def load(self, selector):
         try:
@@ -98,6 +108,50 @@ class EventDBSession(ModelDBSession):
         except KeyError, e:
             raise EventDBException(str(e), 1)
     
+    def delete(self, selector):
+        target = selector.get('target')
+        etype = selector.get('etype')
+        from_t = selector.get('from')
+        to_t = selector.get('to')
+        _filter = selector.get('filter')
+        if _filter is None:
+            _filter = lambda x: True
+
+        if target is None and etype is None:
+            for target_elems in self.root.itervalues():
+                for etype_elems in target_elems.itervalues():
+                    for t in list(etype_elems.keys(from_t, to_t)):
+                        if _filter(etype_elems[t]):
+                            del etype_elems[t]
+                            logger.debug("delete event %s on %s at %s" %\
+                                    (etype, target, t))
+                    
+        elif target is None:
+            for target_elems in self.root.itervalues():
+                etype_elems = target_elems[etype]
+                for t in list(etype_elems.keys(from_t, to_t)):
+                    if _filter(etype_elems[t]):
+                        del etype_elems[t]
+                        logger.debug("delete event %s on %s at %s" %\
+                                (etype, target, t))
+
+        elif etype is None:
+            for etype_elems in self.root[target].itervalues():
+                for t in list(etype_elems.keys(from_t, to_t)):
+                    if _filter(etype_elems[t]):
+                        del etype_elems[t]
+                        logger.debug("delete event %s on %s at %s" %\
+                                (etype, target, t))
+
+        else:
+            etype_elems = self.root[target][etype]
+            for t in list(etype_elems.keys(from_t, to_t)):
+                logger.debug(t)
+                if _filter(etype_elems[t]):
+                    del etype_elems[t]
+                    logger.debug("delete event %s on %s at %s" %\
+                            (etype, target, t))
+
     def probe(self, target, etype, max_t):
         try:
             k = self.root[target][etype].minKey(max_t)

@@ -1,6 +1,8 @@
+import pdb
 import logging
+import threading
 import time
-from Queue import Queue
+import Queue
 from SocketServer import StreamRequestHandler, ThreadingTCPServer
 
 #from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
@@ -49,7 +51,7 @@ class EventBus(object):
                  ServiceServerClass=ThreadingXMLRPCServer):
         self._event_server_addr = event_server_addr
         self._service_server_addr = service_server_addr
-        self._queue = Queue()
+        self._queue = Queue.Queue()
         self._eventServer = EventServerClass(event_server_addr, RequestHandlerClass)
         self._serviceServer = ServiceServerClass(service_server_addr)
         self._subscribers = {}
@@ -76,10 +78,15 @@ class EventBus(object):
         if match:
             setattr(subscriber, '__match__', match)
         subscribers.add(subscriber)
+        logger.debug("%s subscribes events %s on %s" % (\
+                        subscriber, etype, target))
 
     def handleUnsubscribe(self, etype, subscriber, target=None):
         try:
-            self._subscribers[etype][str(target)].remove(subscriber)
+            target = str(target) if target is not None else self._ALL
+            self._subscribers[etype][target].remove(subscriber)
+            logger.debug("%s unsubscribes events %s on %s" % (\
+                            subscriber, etype, target))
         except KeyError, e:
             logger.exception()
 
@@ -89,17 +96,20 @@ class EventBus(object):
 
     def shutdownEventServer(self):
         self._eventServer.shutdown()
+        self._eventServer.server_close()
 
     def startServiceServer(self):
         logger.info("Starting serice server on %s:%s" % self._service_server_addr)
         #self._serviceServer.register_function(self.handleSubscribe)
         #self._serviceServer.register_function(self.handleUnsubscribe)
+        self._serviceServer.register_introspection_functions()
         self._serviceServer.serve_forever()
 
     def shutdownServiceServer(self):
         self._serviceServer.shutdown()
+        self._serviceServer.server_close()
 
-    def registerService(self, func):
+    def registerService(self, func, funcName=None):
         #def wrap(func):
             #ebus = self
             #def wrapped(*args, **kwargs):
@@ -108,7 +118,7 @@ class EventBus(object):
             #wrapped.__name__ = func.__name__
             #return wrapped
         #self._serviceServer.register_function(wrap(func))
-        self._serviceServer.register_function(func)
+        self._serviceServer.register_function(func, funcName)
 
     def onEventArrival(self, evt):
         self._queue.put(evt)
@@ -132,28 +142,37 @@ class EventBus(object):
         #print self._subscribers
         etype = evt.eventType
         if not self._subscribers.has_key(etype):
-            logger.info('unsubscribed event type: %s' % etype)
+            #logger.debug('unsubscribed event type: %s' % etype)
             return
-        self._notifyAll(evt, self._subscribers[etype][self._ALL])
+        if self._subscribers[etype].has_key(self._ALL):
+            self._notifyAll(evt, self._subscribers[etype][self._ALL])
 
         target = str(getattr(evt, 'target'))        
         if target is not None:
-            if not self._subscribers.has_key(target):
-                logger.debug('unsubscribed target %s for event %s' % \
-                        (target, etype))
+            if not self._subscribers[etype].has_key(target):
+                #pdb.set_trace()
+                #logger.debug('unsubscribed target %s for event %s' % \
+                        #(target, etype))
                 return
             self._notifyAll(evt, self._subscribers[etype][target])
 
     def dispatch(self):
         #logger.info("Starting dispatcher")
         while self._RUNNING:
-            evt = self._queue.get(True)
-            self.route(evt)
+            try:
+                evt = self._queue.get(True, 1)
+                self.route(evt)
+            except Queue.Empty, e:
+                continue
 
     def cleanup(self):
         self._RUNNING = False
         self.shutdownEventServer()
         self.shutdownServiceServer()
+        ct = threading.current_thread()
+        for t in threading.enumerate():
+            if t != ct:
+                t.join()
 
 def subscribe(etype, subscriber, target=None, match=None):
     EventBus().handleSubscribe(etype, subscriber, target, match)

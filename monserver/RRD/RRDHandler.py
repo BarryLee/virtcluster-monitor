@@ -95,7 +95,10 @@ class RRDHandler(Singleton):
                 ret = rrdfetchlatest(rrd_db, cf, resolution)
             else:
                 #val = self.rrd_fetch(rrd_db, cf, resolution, start, end)
-                ret = rrdfetch_wrapper(rrd_db, cf, resolution, start, end)
+                if end is None:
+                    ret = rrdfetch_wrapper(rrd_db, cf, resolution, start)
+                else:
+                    ret = rrdfetch_wrapper(rrd_db, cf, resolution, start, end)
         except rrdtool.error, e:
             logger.exception("%s, %s, %s, %s, %s" % (rrd_db, cf, resolution, start, end))
             raise RRDHandlerException, str(e)

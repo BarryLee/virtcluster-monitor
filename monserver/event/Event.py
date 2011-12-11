@@ -1,3 +1,4 @@
+import pdb
 import json
 from time import time
 
@@ -13,6 +14,9 @@ class Event(Persistent):
         self.eventType = etype or self.__class__.__name__
         self.target = target
         self.occurTime = occur_t if occur_t else int(time())
+        #self.detectTime = self.occurTime
+        self.recurs = 0
+        self.merge_key = ''
 
         self.__dict__.update(econtent)
 
@@ -23,7 +27,16 @@ class Event(Persistent):
         return self.__win
 
     def mergable(self, evt):
-        return True
+        #return True
+        #pdb.set_trace()
+        return self.merge_key == evt.merge_key
+
+    def merge(self, evt):
+        #if not hasattr(self, 'recurs'):
+            #self.recurs = []
+        #self.recurs.append(evt.occurTime)
+        self.recurs += 1
+        self.occurTime = evt.occurTime
 
     def info(self):
         return self.__dict__

@@ -12,7 +12,8 @@ disk_metrics = ['rps','wps','rrqmps','wrqmps','rsecps','wsecps',
 d_table = {}
 
 __all__ = ['get_stats', 'get_host_state', 'get_host_info', 
-           'get_host_list', 'get_metric_list']
+           'get_host_list', 'get_metric_list', 'add_threshold',
+           'rm_host_threshold']
 
 def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
                    startTime=None, endTime=None):
@@ -49,4 +50,10 @@ def get_host_list():
 
 def get_metric_list(hostId):
     return rpc_client.metricList(hostId)
+
+def add_threshold(hostIds, tid):
+    return rpc_client.addThreshold(hostIds, tid)
+
+def rm_host_threshold(hostId, tid):
+    return rpc_client.rmHostThreshold(hostId, tid)
 

@@ -34,8 +34,8 @@ class ModelDB(Singleton):
         #print "__init__() called"
 
 
-    def commit(self):
-        transaction.commit()
+    #def commit(self):
+        #transaction.commit()
 
 
     def getConnection(self):
@@ -52,7 +52,7 @@ class ModelDB(Singleton):
         root = conn.root()
         if not root.has_key("all"):
             root["all"] = OOBTree()
-            self.commit()
+            transaction.commit()
         self._opened = 1
 
 
@@ -70,9 +70,12 @@ class ModelDBSession(object):
         self.connection = self.modeldb.getConnection()
         #self.root = self.connection.root().get("all")
         self.root = self.connection.root()
-        
+        self.trans = transaction.get()
 
-    def setResource(self, res_type, res_key, obj):
+    def hasResource(self, res_key):
+        return self.root['all'].has_key(res_key)
+
+    def addResource(self, res_type, res_key, obj):
         if not self.root.has_key(res_type):
             self.root[res_type] = OOBTree()
 
@@ -99,12 +102,14 @@ class ModelDBSession(object):
 
 
     def commit(self):
-        transaction.commit()
+        self.trans.commit()
 
+    def abort(self):
+        self.trans.abort()
 
     def close(self):
         self.connection.close()
-        del self.root
+        #del self.root
 
 
 
