@@ -118,8 +118,10 @@ class MonServer(object):
         finally:
             interface.close()
 
-    def getHostThreshold(self, hostID):
-        pass
+    def get_stats(self, hostId, metricName, stat='AVERAGE', step=15,
+                  startTime=None, endTime=None):
+        from api.mon import get_stats
+        return get_stats(hostId, metricName, stat, step, startTime, endTime)
 
 def bring_up_all_agents():
     interface = Interface()
@@ -157,6 +159,7 @@ def main():
 
     rpc_port = global_config.get("rpc_port")
     rpc_server = ThreadingXMLRPCServer((local_host, rpc_port),
+                                       allow_none=True,
                                        logRequests=False)
     rpc_server.register_introspection_functions()
     #rpc_server.register_function(sign_in)
