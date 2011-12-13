@@ -68,7 +68,9 @@ class EventBus(object):
         #print self.__dict__
         threadinglize(self.startEventServer)()
         threadinglize(self.dispatch)()
-        self.startServiceServer()
+        threadinglize(self.startServiceServer)()
+        while True:
+            time.sleep(1)
 
     def halt(self):
         self.cleanup()
@@ -108,6 +110,7 @@ class EventBus(object):
     def shutdownEventServer(self):
         self._eventServer.shutdown()
         self._eventServer.server_close()
+        logger.info("Shutdown event server")
 
     def startServiceServer(self):
         logger.info("Starting serice server on %s:%s" % self._service_server_addr)
@@ -119,6 +122,7 @@ class EventBus(object):
     def shutdownServiceServer(self):
         self._serviceServer.shutdown()
         self._serviceServer.server_close()
+        logger.info("Shutdown service server")
 
     def registerService(self, func, funcName=None):
         #def wrap(func):
@@ -180,10 +184,10 @@ class EventBus(object):
         self._RUNNING = False
         self.shutdownEventServer()
         self.shutdownServiceServer()
-        ct = threading.current_thread()
-        for t in threading.enumerate():
-            if t != ct:
-                t.join()
+        #ct = threading.current_thread()
+        #for t in threading.enumerate():
+            #if t != ct:
+                #t.join()
 
 def subscribe(etype, subscriber, target=None, match=None):
     EventBus().handleSubscribe(etype, subscriber, target, match)

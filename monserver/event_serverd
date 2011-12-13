@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+from includes.daemonize import startstop
+from utils.load_config import load_global_config
+
+config = load_global_config()
+
+startstop(stdout=config['esofile'],
+          stderr=config['esefile'],
+          pidfile=config['espfile'])
+
+from event_server import main
+main()

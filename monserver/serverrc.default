@@ -31,7 +31,7 @@ efile = '/tmp/monserver.out'
 pfile = '/tmp/monserver.pid'
 
 # log path
-logfile = '/tmp/monserver.log'
+#logfile = '/tmp/monserver.log'
 
 # if the server doesn't recieve data from a agent for this long,
 # it considers the agent down. (in seconds)
@@ -54,8 +54,15 @@ agent_port = 20070
 # event configs
 #
 # event server port number
-evt_port = 20062
-evt_srv_port = 20063
+evt_port = 20066
+evt_srv_port = 20067
+
+# event server standard output/error file
+esofile = '/tmp/monevent.out'
+esefile = '/tmp/monevent.err'
+
+# event server pid file
+espfile = '/tmp/monevent.pid'
 
 # event db conf path
 event_db_conf = 'event/eventstore.conf'
