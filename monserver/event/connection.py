@@ -1,5 +1,8 @@
 import logging
 import socket
+import json
+
+import Event
 
 logger = logging.getLogger('event.connection')
 
@@ -11,13 +14,17 @@ class Connection(object):
         self._addr = addr
 
     def sendEvent(self, evt):
+        #logger.debug("sending event %s" % evt)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ret = False
         try:
             sock.connect(self._addr)
 
             #print '%s\r\n' % str(evt)
-            sock.send('%s\r\n' % str(evt))
+            if isinstance(evt, Event.Event):
+                sock.send('%s\r\n' % Event.dumps(evt))
+            else:
+                sock.send('%s\r\n' % json.dumps(evt))
             #res = ''
             #while True:
                 #chunk = sock.recv(BUFSIZE)

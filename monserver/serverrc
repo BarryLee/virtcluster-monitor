@@ -60,3 +60,4 @@ evt_srv_port = 20063
 # event db conf path
 event_db_conf = 'event/eventstore.conf'
 
+threshold_db_conf = 'threshold/thresholdstore.conf'

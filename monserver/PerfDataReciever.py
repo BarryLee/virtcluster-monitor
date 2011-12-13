@@ -15,8 +15,8 @@ logger = logging.getLogger('PerfDateReciever')
 
 class PerfDataArrival(Event):
 
-    def __init__(self, occur_t, host, metric, val):
-        super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occur_t)
+    def __init__(self, occurTime, host, metric, val):
+        super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occurTime)
         self.metric = metric
         self.val = val
         #self.detectTime = int(time.time()*1e6)
@@ -59,7 +59,14 @@ class DRRequestHandler(BaseRequestHandler):
         t = data['timestamp']
         device = data.get('device','')
         for m,v in data['val'].items():
-            yield PerfDataArrival(t, host, self.metricName(device,m), v)
+            #yield PerfDataArrival(t, host, self.metricName(device,m), v)
+            yield {
+                    'occurTime': t,
+                    'eventType':'PerfDataArrival',
+                    'host': host,
+                    'metric': self.metricName(device,m),
+                    'val': v
+                  }
         
     def metricName(self, device, metric):
         if len(device):

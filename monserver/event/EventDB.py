@@ -26,7 +26,9 @@ class EventDB(ModelDB):
 class EventDBSession(ModelDBSession):
     
     def save(self, event):
-        assert isinstance(event, Event.Event)
+        logger.debug("saving event %s" % event)
+        #if not isinstance(event, Event.Event):
+            #pdb.set_trace()
         target = getattr(event, 'target')
         if target is None:
             logger.warning('event with no target %s' % event.eventType)
@@ -72,10 +74,12 @@ class EventDBSession(ModelDBSession):
     def load(self, selector):
         try:
             return list(self.delayedLoad(selector))
-        except KeyError, e:
-            raise EventDBException(str(e), 1)
-        except ValueError, e:
-            raise EventDBException(str(e), 1)
+        except EventDBException, e:
+            #raise EventDBException(str(e), 1)
+            if e.errno == 1:
+                return []
+            else:
+                raise
 
     def delayedLoad(self, selector):
         target = selector.get('target')

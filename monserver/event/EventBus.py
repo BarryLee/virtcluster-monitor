@@ -12,29 +12,32 @@ from monserver.includes.Singleton import MetaSingleton
 from monserver.utils.utils import threadinglize
 #from monserver.utils.get_logger import get_logger
 import Event
+from event_factory import make_event
 
-__all__ = ['EventBus', 'subscribe', 'on_event_arrival']
+__all__ = ['EventBus', 'subscribe', 'send_event']
 
 logger = logging.getLogger("event.EventBus")
 #logger = get_logger("event.EventBus")
 
 class _Server(ThreadingTCPServer):
-    pass
+    
+    def __init__(self, server_addr, RequestHandlerClass, ebus):
+        ThreadingTCPServer.__init__(self, server_addr, RequestHandlerClass)
+        self.ebus = ebus
 
 class _RequestHandler(StreamRequestHandler):
 
     def handle(self):
         req = ''
-        try:
-            req = self.rfile.readline().strip()
-            #print req
-            #evt = self.parse(req)
-            evt = Event.loads(req)
-            on_event_arrival(evt)
-            self.wfile.write(0)
-        except Event.EventException:
-            logger.exception("Invalid event format")
+        req = self.rfile.readline().strip()
+        #print req
+        #evt = self.parse(req)
+        evt = make_event(req)
+        if evt is None:
             self.wfile.write(1)
+            return
+        self.server.ebus.onEventArrival(evt)
+        self.wfile.write(0)
 
     #def parse(self, req_data):
         #return Event.loads(req_data)
@@ -52,7 +55,8 @@ class EventBus(object):
         self._event_server_addr = event_server_addr
         self._service_server_addr = service_server_addr
         self._queue = Queue.Queue()
-        self._eventServer = EventServerClass(event_server_addr, RequestHandlerClass)
+        self._eventServer = EventServerClass(event_server_addr, 
+                                        RequestHandlerClass, self)
         self._serviceServer = ServiceServerClass(service_server_addr)
         self._subscribers = {}
         self._RUNNING = 0
@@ -90,6 +94,13 @@ class EventBus(object):
         except KeyError, e:
             logger.exception()
 
+    def getSubscribers(self, etype, target=None):
+        try:
+            target = str(target) if target is not None else self._ALL
+            return [i for i in self._subscribers[etype][target]]
+        except KeyError, e:
+            return []
+        
     def startEventServer(self):
         logger.info("Starting event server on %s:%s" % self._event_server_addr)
         self._eventServer.serve_forever()
@@ -177,7 +188,9 @@ class EventBus(object):
 def subscribe(etype, subscriber, target=None, match=None):
     EventBus().handleSubscribe(etype, subscriber, target, match)
 
-def on_event_arrival(evt):
+def send_event(evt):
+    #print "short cut!!!"
+    #logger.debug("sending event %s" % evt)
     EventBus().onEventArrival(evt)
 
 def run(event_server_addr, service_server_addr):

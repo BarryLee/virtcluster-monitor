@@ -5,7 +5,7 @@ from time import time
 from persistent import Persistent
 
 from monserver.event.Event import Event
-from api.event import send_event
+from monserver.api.event import send_event
 
 __all__ = ["Threshold", "CompositeThreshold"]
 
@@ -14,24 +14,30 @@ class ThresholdViolation(Event):
     def __init__(self, host, tid):
         super(ThresholdViolation, self).__init__(target=host)
         self.tid = tid
-        self.merge_key = tid
+        #self.merge_key = tid
 
-    #def mergable(self, evt):
+    def mergable(self, evt):
         #pdb.set_trace()
-        #return self.tid == evt.tid
+        return self.tid == evt.tid
 
 class Threshold(object):
 
-    def __init__(self, tid, host, metric, tval, ttype, callback=None):
+    def __init__(self, tid, host, metric, tval, ttype=0, 
+            win=0, recur=1 ,callback=None):
         self.tid = tid
         self.host = host
         self.metric = metric
-        self.threshold = tval
+        self.tval = tval
+        self.ttype = ttype
+        self.win = win
+        self.recur = recur
+        self._recurs = 0
+        self._win_in = 0
         # 0 refers to upper bound, 1 refers to lower bound
         if ttype == 0:
-            self.test = lambda x: x > self.threshold
+            self.test = lambda x: x > self.tval
         elif ttype == 1:
-            self.test = lambda x: x < self.threshold
+            self.test = lambda x: x < self.tval
 
         self.callback = callback
         self.etype = 'ThresholdViolation'
@@ -43,11 +49,29 @@ class Threshold(object):
         ret = 0
         if evt.metric == self.metric:
             if self.test(evt.val):
-                ret = 1
-                send_event(self.produceEvent(evt.val))
-                if self.callback:
-                    self.callback(evt)
+                now = time()
+                if now - self._win_in > self.win: 
+                    self._recurs = 1
+                    self._win_in = now
+                else:
+                    self._recurs += 1
+                if self._recurs >= self.recur:
+                    ret = 1
+                    send_event(self.produceEvent(evt.val))
+                    if self.callback:
+                        self.callback(evt)
         return ret
+
+    def info(self):
+        return {
+                "tid": self.tid,
+                "host": self.host,
+                "metric": self.metric,
+                "tval": self.tval,
+                "ttype": self.ttype,
+                "win": self.win,
+                "recur": self.recur
+               }
 
 class CompositeThreshold(object):
 
@@ -92,3 +116,7 @@ class CompositeThreshold(object):
         finally:
             #self._lock.release()
             return ret
+
+if __name__ == '__main__':
+    t = ThresholdViolation('lo', 1)
+    print isinstance(t, Event)

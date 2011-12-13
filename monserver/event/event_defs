@@ -1,0 +1,12 @@
+[{
+    "module":   "monserver.models.event_defs",
+    "class":    ["HostInactive", "HostDel"]
+},
+{
+    "module":   "monserver.threshold.Threshold",
+    "class":    ["ThresholdViolation"]
+},
+{
+    "module":   "monserver.PerfDataReciever",
+    "class":    ["PerfDataArrival"]
+}]

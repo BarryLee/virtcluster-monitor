@@ -1,20 +1,30 @@
 import logging
 import os
 import time
+import copy
 
 from utils.load_config import load_global_config
 from utils.utils import current_dir, rpc_formalize
 from utils import logging_conf
-from event.EventBus import EventBus
+from event.EventBus import EventBus, send_event
 from event.EventDB import EventDB
 from threshold.ThresholdManager import *
-from threshold.Threshold import *
+#from threshold.Threshold import *
+from threshold import Threshold
 
-config = load_global_config()
+CompositeThreshold = Threshold.CompositeThreshold
+Threshold.send_event = send_event
+
 logger = logging.getLogger("event.main")
 
-event_db_conf = current_dir(__file__) + os.path.sep + config.get('event_db_conf')
+curdir = current_dir(__file__)
+config = load_global_config()
+
+event_db_conf = curdir + os.path.sep + config.get('event_db_conf')
 edb = EventDB.getInstance(event_db_conf)
+
+threshold_db_conf = curdir + os.path.sep + config.get('threshold_db_conf')
+threshold_manager = ThresholdManager(threshold_db_conf)
 
 def save_event(evt):
     conn = edb.openSession()
@@ -33,7 +43,11 @@ def delete_events(selector={}):
 @rpc_formalize()
 def get_events(selector={}):
     conn = edb.openSession()
-    res = [e.info() for e in conn.load(selector)]
+    evts = conn.load(selector)
+    res = [copy.copy(e.info()) for e in evts]
+    for e in evts:
+        e.unread = False
+    conn.commit()
     conn.close()
     return res
 
@@ -47,12 +61,18 @@ def main():
     #ebus.handleSubscribe('HostDel', save_event)
     ebus.handleSubscribe('ThresholdViolation', save_event)
 
-    threshold_manager = ThresholdManager()
+    for tid, threshold_handler in threshold_manager._thresholds.iteritems():
+        if hasattr(threshold_handler, 'hosts'):
+            hosts = threshold_handler.hosts
+        else:
+            hosts = [threshold_handler.host]
+        for h in hosts:
+            ebus.handleSubscribe('PerfDataArrival', threshold_handler, h)
 
     @rpc_formalize()
     def set_threshold(threshold_specs):
         threshold_handler = threshold_manager.setThreshold(threshold_specs)
-        if isinstance(threshold_handler, CompositeThreshold):
+        if hasattr(threshold_handler, 'hosts'):
             hosts = threshold_handler.hosts
         else:
             hosts = [threshold_handler.host]
@@ -66,7 +86,7 @@ def main():
         except ThresholdManagerException, e:
             logger.warning(e)
             return
-        if isinstance(threshold_handler, CompositeThreshold):
+        if hasattr(threshold_handler, 'hosts'):
             hosts = threshold_handler.hosts
         else:
             hosts = [threshold_handler.host]
@@ -76,12 +96,19 @@ def main():
                 'filter': lambda e: e.tid == tid})
         threshold_manager.unsetThreshold(tid)
 
+    @rpc_formalize()
+    def get_host_thresholds(host):
+        return [i.info() for i in ebus.getSubscribers("PerfDataArrival", host) \
+                if isinstance(i, Threshold.Threshold)] 
+
     ebus.registerService(set_threshold, 'set_threshold')
     ebus.registerService(unset_threshold, 'unset_threshold')
     ebus.registerService(get_events, 'get_events')
+    ebus.registerService(get_host_thresholds, 'get_host_thresholds')
     try:
         ebus.startAll()
     except KeyboardInterrupt, e:
+        logger.info("closing...")
         ebus.cleanup()
         #time.sleep(1)
 

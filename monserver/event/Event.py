@@ -4,19 +4,22 @@ from time import time
 
 from persistent import Persistent
 
+__all__ = ['EventException', 'Event', 'dumps', 'loads']
+
 class EventException(Exception): pass
 
 class Event(Persistent):
 
     __win = 600
 
-    def __init__(self, target, etype=None, occur_t=None, **econtent):
-        self.eventType = etype or self.__class__.__name__
+    def __init__(self, target, eventType=None, occurTime=None, **econtent):
+        self.eventType = eventType or self.__class__.__name__
         self.target = target
-        self.occurTime = occur_t if occur_t else int(time())
+        self.occurTime = occurTime if occurTime else int(time())
         #self.detectTime = self.occurTime
         self.recurs = 0
-        self.merge_key = ''
+        #self.merge_key = ''
+        self.unread = True
 
         self.__dict__.update(econtent)
 
@@ -27,9 +30,9 @@ class Event(Persistent):
         return self.__win
 
     def mergable(self, evt):
-        #return True
+        return True
         #pdb.set_trace()
-        return self.merge_key == evt.merge_key
+        #return self.merge_key == evt.merge_key
 
     def merge(self, evt):
         #if not hasattr(self, 'recurs'):
@@ -37,16 +40,20 @@ class Event(Persistent):
         #self.recurs.append(evt.occurTime)
         self.recurs += 1
         self.occurTime = evt.occurTime
+        self.unread = True
 
     def info(self):
         return self.__dict__
+
+    def msg(self):
+        return self.__str__()
 
 def loads(event_dump):
     try:
         edict = json.loads(event_dump)
         evt_type = edict.pop('eventType')
-        occur_time = edict.pop('occurTime')
-        return Event(etype=evt_type, occur_t=occur_time, **edict)
+        occurTime = edict.pop('occurTime')
+        return Event(eventType=evt_type, occurTime=occurTime, **edict)
     except Exception, e:
         raise EventException
 

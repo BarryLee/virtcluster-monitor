@@ -1,6 +1,6 @@
 from monserver.event.Event import *
 
-__all__ = ['HostInactive']
+__all__ = ['HostInactive', 'HostDel']
 
 class HostInactive(Event):
 
@@ -10,7 +10,9 @@ class HostInactive(Event):
                                            None,
                                            ip=ip,
                                            **econtent)
-        self.msg = "Host %s(%s) state changed to inactive" % (self.target, self.ip)
+
+    def msg(self):
+        return "Host %s(%s) state changed to inactive" % (self.target, self.ip)
 
 
 class HostDel(Event):
@@ -20,4 +22,6 @@ class HostDel(Event):
                                       'HostDel',
                                       None,
                                       **econtent)
-        self.msg = "Host %s deleted" % (self.target,)
+
+    def msg(self):
+        return "Host %s deleted" % (self.target,)

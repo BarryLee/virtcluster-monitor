@@ -21,7 +21,7 @@ from utils.get_logger import get_logger
 from monserver.RRD.cleanup import rmrrds
 from monserver.VIMBroker import VIM
 from monserver.api.event import send_event, unset_threshold
-from event_defs import *
+#from event_defs import *
 
 logger = get_logger("models.interface")
 
@@ -105,14 +105,14 @@ class Interface(object):
             host = Host(ip)
         logger.debug("create record for %s:%s" % (host.id, ip))
 
-        if self.session.hasResource(host.id):
-            hostobj = self.getHost(host.id)
+        #if self.session.hasResource(host.id):
+            #hostobj = self.getHost(host.id)
             #self.delHost(host.rtype, host.id)
-            for tid in hostobj.thresholds:
-                unset_threshold(tid)
-            self.session.delResource(host.rtype, host.id)
-            self.session.delResource("all", host.id)
-            logger.info("unregister host %s" % host.id)
+            #for tid in hostobj.thresholds:
+                #unset_threshold(tid)
+            #self.session.delResource(host.rtype, host.id)
+            #self.session.delResource("all", host.id)
+            #logger.info("unregister host %s" % host.id)
             #self.close()
             #self.open()
 
@@ -236,19 +236,27 @@ class Interface(object):
                 host_obj = active_hosts.pop(ip)
                 logger.warning("""no msg from %s(%s) for more than %d seconds,\
 remove it from session""" % (host_obj.id, ip, timeout))
-                send_event(HostInactive(host_obj.id, ip=ip))
+                #send_event(HostInactive(host_obj.id, ip=ip))
+                send_event({
+                            'eventType': 'HostInactive',
+                            'hostId': host_obj.id,
+                            'ip': ip
+                           })
             self.session.commit()                           
 
 
     def delHost(self, host_type, host_id):
         logger.debug("delete host %s" % host_id)
-        hostobj = self.getHost(host_id)
-        for tid in hostobj.thresholds:
-            unset_threshold(tid)
+        #hostobj = self.getHost(host_id)
+        #for tid in hostobj.thresholds:
+            #unset_threshold(tid)
         self.session.delResource(host_type, host_id)
         self.session.delResource("all", host_id)
         self.session.commit()
-        #send_event(HostDel(host_id))
+        send_event({
+                    'eventType': 'HostDel',
+                    'hostId': host_id
+                   })
 
     def checkExpire(self, host_type, expire_time):
         hosts = self.session.root.get(host_type, None)
