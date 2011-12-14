@@ -1,7 +1,7 @@
 #! /bin/bash
 
-APP_PATH=$(cd "$(dirname "$0")"; pwd)
-#echo $APP_PATH
+DIR_PATH=$(cd "$(dirname "$0")"; pwd)
+#echo $DIR_PATH
 SERVER="serverd"
 EVENT_SERVER="event_serverd"
 #PYTHON="python2.6"
@@ -23,13 +23,13 @@ _error () {
 
 _isrunning () { ps ax|grep -i "$1"|grep -v grep; }
 
-_killall() {
+_killall () {
     ps ax|grep "$1"|grep -v grep|awk '{print $1}'|xargs kill
 }
 
 _start () {
     echo "starting ""$1"
-    cmd=$APP_PATH"/"$1
+    cmd=$DIR_PATH"/"$1
     if _isrunning "$cmd"
     then
         _error "$1"" is running"
@@ -40,7 +40,7 @@ _start () {
 
 _stop () {
     echo "stoping ""$1"
-    "$APP_PATH"/"$1" stop
+    "$DIR_PATH"/"$1" stop
 }
 
 if [ "$#" -ne 1 ]
