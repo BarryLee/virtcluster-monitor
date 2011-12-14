@@ -184,10 +184,10 @@ class EventBus(object):
         self._RUNNING = False
         self.shutdownEventServer()
         self.shutdownServiceServer()
-        #ct = threading.current_thread()
-        #for t in threading.enumerate():
-            #if t != ct:
-                #t.join()
+        ct = threading.current_thread()
+        for t in threading.enumerate():
+            if t != ct:
+                t.join()
 
 def subscribe(etype, subscriber, target=None, match=None):
     EventBus().handleSubscribe(etype, subscriber, target, match)
