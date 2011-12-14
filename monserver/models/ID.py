@@ -30,10 +30,10 @@ def vm_id(ip):
         return ip
 
 def get_id(hostobj):
-    if isinstance(hostobj, resources.Host):
-        return host_id(hostobj.ip)
-    elif isinstance(hostobj, resources.VM):
+    if isinstance(hostobj, resources.VM):
         return vm_id(hostobj.ip)
+    elif isinstance(hostobj, resources.Host):
+        return host_id(hostobj.ip)
     else:
         raise Exception, 'unknown host type: %s' % type(hostobj)
 
