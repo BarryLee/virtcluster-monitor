@@ -1,6 +1,7 @@
 import ZODB.config
 import transaction
 from BTrees.OOBTree import OOBTree
+from ZODB.POSException import ConflictError, ConnectionStateError
 
 from monserver.includes.singletonmixin import Singleton
 #from utils.utils import put_to_dict
@@ -10,6 +11,8 @@ class ModelDBException(Exception):
     """errno:
         0 -- undefined
         1 -- no such record
+        2 -- conflict error
+        3 -- connection state error
     """
     def __init__(self, errmsg, errno=0):
         super(ModelDBException, self).__init__(errmsg, errno)
@@ -70,7 +73,7 @@ class ModelDBSession(object):
         self.connection = self.modeldb.getConnection()
         #self.root = self.connection.root().get("all")
         self.root = self.connection.root()
-        self.trans = transaction.get()
+        #self.trans = transaction.get()
 
     def hasResource(self, res_key):
         return self.root['all'].has_key(res_key)
@@ -102,14 +105,20 @@ class ModelDBSession(object):
 
 
     def commit(self):
-        self.trans.commit()
+        try:
+        #self.trans.commit()
+            transaction.commit()
+        except ConflictError, e:
+            raise ModelDBException(e, 2)
 
     def abort(self):
-        self.trans.abort()
+        #self.trans.abort()
+        transaction.abort()
 
     def close(self):
-        self.connection.close()
-        #del self.root
-
-
+        try:
+            self.connection.close()
+            #del self.root
+        except ConnectionStateError, e:
+            raise ModelDBException(e, 3)
 

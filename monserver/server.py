@@ -192,9 +192,25 @@ def main():
                    0, -1, check_expire_interval)(expire_time)
     logger.info("check_expire started...")
 
-    while True:
-        #myprint(threading.enumerate())
-        sleep(60)
+    from signal import signal, SIGTERM
+
+    def exit(*args):
+        logger.debug('closing...')
+        data_server.shutdown()
+        data_server.server_close()
+        rpc_server.shutdown()
+        rpc_server.server_close()
+        sleep(1)
+        sys.exit()
+
+    signal(SIGTERM, exit)
+
+    try:
+        while True:
+            #myprint(threading.enumerate())
+            sleep(60)
+    except KeyboardInterrupt:
+        exit()
 
 
 #def bye():

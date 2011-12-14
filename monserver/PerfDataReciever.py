@@ -5,7 +5,7 @@ from SocketServer import BaseRequestHandler, ThreadingUDPServer
 import time
 import logging
 
-from models.Interface import Interface
+from models.Interface import Interface, ModelDBException
 from utils.utils import decode
 from api.event import send_event
 from event.Event import Event
@@ -40,8 +40,15 @@ class DRRequestHandler(BaseRequestHandler):
             host_obj = self.model_int.getActiveHost(ip)
             host_id = host_obj.id
             host_obj.last_arrival = time.time()
-            self.model_int.commit()
-            self.model_int.close()
+            try:
+                self.model_int.commit()
+                self.model_int.close()
+            except ModelDBException, e:
+                #logger.exception('')
+                if e.errno in (2, 3):
+                    pass
+                else:
+                    logger.exception('')
             data = decode(data)
             for evt in self.produceEvent(host_id, data):
                 send_event(evt)
@@ -95,6 +102,7 @@ class DataReciever(ThreadingUDPServer):
         ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
         self.data_store_handler = data_store_handler
         #self.event_server_address = event_server_address
+        #self.model_int = Interface()
 
 
     def verify_request(self, request, client_address):
@@ -105,4 +113,6 @@ class DataReciever(ThreadingUDPServer):
     #def finish_request(self, request, client_address):
         #self.RequestHandlerClass(request, client_address, self, self.data_store_handler)
 
-
+    #def server_close(self):
+        #self.model_int.close()
+        #ThreadingUDPServer.server_close(self)
