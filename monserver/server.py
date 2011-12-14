@@ -44,13 +44,32 @@ class MonServer(object):
         return host_metric_list(hostID)
 
     @rpc_formalize()
-    def hostList(self):
-        host_list = map(lambda x: (x[0], x[1].id), 
-                        get_active_hosts().items())
-        return host_list
+    def hostList(self, hostType='all'):
+        interface = Interface()
+        try:
+            #host_list = map(lambda x: (x[0], x[1].id), 
+                            #interface.getActiveHosts().items())
+            host_list = list(interface.session.getResource(hostType).keys())
+            return host_list
+        except Exception:
+            raise
+        finally:
+            interface.close()
 
     @rpc_formalize()
-    def getHostState(self, hostID):
+    def activeHosts(self):
+        interface = Interface()
+        try:
+            active_hosts = map(lambda x: (x[1].id, x[0]), 
+                            interface.getActiveHosts().items())
+            return active_hosts
+        except Exception:
+            raise
+        finally:
+            interface.close()
+
+    @rpc_formalize()
+    def hostState(self, hostID):
         interface = Interface()
         try:
             hostobj = interface.getHost(hostID)
@@ -71,7 +90,7 @@ class MonServer(object):
             interface.close()
 
     @rpc_formalize()
-    def getHostInfo(self, hostID):
+    def hostInfo(self, hostID):
         interface = Interface()
         try:
             hostobj = interface.getHost(hostID)

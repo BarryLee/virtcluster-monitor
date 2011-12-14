@@ -41,17 +41,20 @@ def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
 
 def get_host_state(hostId):
     assert type(hostId) is str
-    return rpc_client.getHostState(hostId)
+    return rpc_client.hostState(hostId)
 
 def get_host_info(hostId):
     assert type(hostId) is str
-    return rpc_client.getHostInfo(hostId)
+    return rpc_client.hostInfo(hostId)
 
-def get_host_list():
-    return rpc_client.hostList()
+def get_host_list(hostType="all"):
+    return rpc_client.hostList(hostType)
 
 def get_metric_list(hostId):
     return rpc_client.metricList(hostId)
+
+def get_active_hosts():
+    return rpc_client.activeHosts()
 
 #def add_threshold(hostIds, tid):
     #return rpc_client.addThreshold(hostIds, tid)
