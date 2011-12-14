@@ -29,12 +29,15 @@ def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
         if d_table.has_key(hostId):
             device = d_table[hostId]
         else:
-            hostinfo = rpc_client.getHostInfo(hostId)[1]
-            device = hostinfo['disks'].keys()[0]
-            d_table[hostId] = device
+            rc, hostinfo = rpc_client.getHostInfo(hostId)
+            if rc:
+                device = hostinfo['disks'].keys()[0]
+                d_table[hostId] = device
+            else:
+                raise Exception, hostinfo
 
-    return rrd_handler.read(hostId, device, metricName, stat, step, \
-                        startTime, endTime)[1]
+    return [i for i in rrd_handler.read(hostId, device, metricName, stat, step, \
+                        startTime, endTime)[1] if i[1] is not None]
 
 def get_host_state(hostId):
     assert type(hostId) is str

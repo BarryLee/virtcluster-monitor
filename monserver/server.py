@@ -159,7 +159,7 @@ def main():
 
     rpc_port = global_config.get("rpc_port")
     rpc_server = ThreadingXMLRPCServer((local_host, rpc_port),
-                                       allow_none=True,
+                                       #allow_none=True,
                                        logRequests=False)
     rpc_server.register_introspection_functions()
     #rpc_server.register_function(sign_in)
