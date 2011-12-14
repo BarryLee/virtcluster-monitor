@@ -22,7 +22,7 @@ def host_id(ip):
 def vm_id(ip):
     """Get vm' id from VIM, otherwise use its ip.
     """
-    vmid = getvmidbyip(ip)
+    vmid = VIM.getvmidbyip(ip)
     if vmid is not None:
         return vmid
     else:
