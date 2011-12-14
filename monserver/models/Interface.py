@@ -96,7 +96,7 @@ class Interface(object):
 
 
     def register(self, ip, info):
-        is_virtual = info.get("virtual")
+        is_virtual = info["is_virtual"]
         virt_type = info.get("virt_type")
 
         if is_virtual:
