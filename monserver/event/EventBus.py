@@ -20,6 +20,8 @@ logger = logging.getLogger("event.EventBus")
 #logger = get_logger("event.EventBus")
 
 class _Server(ThreadingTCPServer):
+
+    allow_reuse_address = True
     
     def __init__(self, server_addr, RequestHandlerClass, ebus):
         ThreadingTCPServer.__init__(self, server_addr, RequestHandlerClass)
