@@ -9,16 +9,22 @@
 var PerfDataSeries = defineClass({
     borrows: DataSeries,
     construct: function(args) {
+        if (args.cf === undefined)
+            args.cf = 'AVERAGE';
+        if (args.name === undefined) 
+            args.name = args.host + '.' + args.metric + '.' + args.cf;
         DataSeries.call(this, args);
         this.host = args.host;
         this.metric = args.metric;
         this.unit = args.unit || 'none';
         this.title = args.title || args.metric;
+        this.cf = args.cf;
+        this.step = args.step || 1;
         urlArgs = {
-            host: args.host,
-            metric: args.metric,
-            cf: args.cf
-            //step: args.step
+            host: this.host,
+            metric: this.metric,
+            cf: this.cf,
+            step: this.step
         }
         
         /*
@@ -101,8 +107,8 @@ var PerfChart = defineClass({
     borrows: PlotWrapper,
     construct: function(args) {
         this.step = args.step;
-        var maxRange;
         if(args.maxRange === undefined) {
+            var maxRange;
             if(this.step <= 60) 
                 maxRange = 3600;
             else if(this.step <= 600)
@@ -123,10 +129,16 @@ var PerfChart = defineClass({
             }
         });
 
+        if (args.metrics) {
+            for (var i = 0; i < args.metrics.length; i++) {
+                this.addMetric(args.metrics[i]);                
+            }
+        }
     },
     methods: {
         setRealTime: function(period) {
             var plotter = this;
+            // set auto update for all metrics
             for(var dname in this.data) {
                 var dataSeries = this.data[dname];
                 var start, step, l;
@@ -142,7 +154,8 @@ var PerfChart = defineClass({
                 }
                 var updateArgs = {
                     start: start,
-                    step: step
+                    step: step,
+                    cf: dataSeries.cf
                 };
                 if(dataSeries instanceof PerfDataSeries) {
                     this.setAutoUpdate(dataSeries, period, function(ds, args) {
@@ -158,61 +171,83 @@ var PerfChart = defineClass({
                                 }
                             }, 'json');
                     }, updateArgs)();
-                }
-            }
+                } // end if
+            } // end for
+            return this;
         }, 
+
         unsetRealTime: function(period) {
             for(var dname in this.data) 
                 this.clearAutoUpdata(dname);
+            return this;
         },
+
+        _addUnitAxis: function(unit) {
+            var u = {};
+            switch(unit) {
+                case 'pct':
+                    u.min = 0, u.max = 100;
+                    u.tickDecimals = 0;
+                    u.tickFormatter = function(val, axis) {
+                        return val.toFixed(axis.tickDecimals) + '%';
+                    }
+                    break;
+                case 'kB':
+                    u.tickDecimals = 1;
+                    u.tickFormatter = function(val, axis) {
+                        return scaleBytes(val * 1024, axis.tickDecimals, 2, '');
+                    }
+                    break;
+                case 'kB/s':
+                    u.tickDecimals = 1;
+                    u.tickFormatter = function(val, axis) {
+                        return scaleBytes(val * 1024, axis.tickDecimals, 2, '/s');
+                    }
+                    break;
+                case 'B/s':
+                    u.tickDecimals = 1;
+                    u.tickFormatter = function(val, axis) {
+                        return scaleBytes(val, axis.tickDecimals, 10, '/s');
+                    }
+                    break;
+                default:
+                    break;
+            }
+            var oldYaxes = this.options.yaxes || [];
+            var index = oldYaxes.length + 1;
+            if (index % 2 == 0) {
+                u.position = 'right';
+                u.alignTicksWithAxis = 1;
+            }
+            this.setOptions({
+                yaxes: oldYaxes.concat(u)
+            });
+            this.yaxes[unit] = index;
+        },
+
         addDataSeries: function(dataSeries) {
             if (dataSeries instanceof PerfDataSeries) {
                 var unit = dataSeries.unit;
                 if (!(unit in this.yaxes)) {
-                    var u = {};
-                    switch(unit) {
-                        case 'pct':
-                            u.min = 0, u.max = 100;
-                            u.tickDecimals = 0;
-                            u.tickFormatter = function(val, axis) {
-                                return val.toFixed(axis.tickDecimals) + '%';
-                            }
-                            break;
-                        case 'kB':
-                            u.tickDecimals = 1;
-                            u.tickFormatter = function(val, axis) {
-                                return scaleBytes(val * 1024, axis.tickDecimals, 2, '');
-                            }
-                            break;
-                        case 'kB/s':
-                            u.tickDecimals = 1;
-                            u.tickFormatter = function(val, axis) {
-                                return scaleBytes(val * 1024, axis.tickDecimals, 2, '/s');
-                            }
-                            break;
-                        case 'B/s':
-                            u.tickDecimals = 1;
-                            u.tickFormatter = function(val, axis) {
-                                return scaleBytes(val, axis.tickDecimals, 10, '/s');
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                    var oldYaxes = this.options.yaxes || [];
-                    var index = oldYaxes.length + 1;
-                    if (index % 2 == 0) {
-                        u.position = 'right';
-                        u.alignTicksWithAxis = 1;
-                    }
-                    this.setOptions({
-                        yaxes: oldYaxes.concat(u)
-                    });
-                    this.yaxes[unit] = index;
+                    this._addUnitAxis(unit);
                 }
                 dataSeries.rawSeries.yaxis = this.yaxes[unit];
             }
             PlotWrapper.prototype.addDataSeries.call(this, dataSeries);
+            return this;
         },
+
+        addMetric: function(metricAttr) {
+            var dataSeries = new PerfDataSeries(metricAttr);
+            return this.addDataSeries(dataSeries);
+        },
+
+        plotOnce: function() {
+            jQuery(this).one('dataSeriesUpdate', function() { 
+                this.unsetRealTime();
+            });
+            this.setRealTime(60000);
+            return this;
+        }
     } 
 });

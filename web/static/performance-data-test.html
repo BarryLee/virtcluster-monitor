@@ -18,7 +18,8 @@
 
 <script id="source" language="javascript" type="text/javascript">
 $(function() {
-    var urlTemplate = '/monitor/json/{host}/{metric}?cf={cf}&step={step}';
+    //var urlTemplate = '/monitor/json/{host}/{metric}?cf={cf}&step={step}';
+    var urlTemplate = '/monitor/json/{host}/{metric}';
     var ds1 = new PerfDataSeries({
             name: 'cpu_usage',
             host: '007',
@@ -74,27 +75,44 @@ $(function() {
         data: [ds1, ds5],
         //maxRange: 3600 
         step: 15,
+        metrics: [
+            {
+                host: '007',
+                metric: 'bytes_in', 
+                title: 'bytes in',
+                unit: 'B/s',
+                urlTemplate: urlTemplate
+            },
+            {
+                host: '007',
+                metric: 'bytes_out', 
+                title: 'bytes out',
+                unit: 'B/s',
+                urlTemplate: urlTemplate
+            }
+        ]
         //options: {
         //    lines: { show: true },
         //    points: { show: true }
         //}
     });
-    myPlot.addDataSeries(ds2);
-    myPlot.addDataSeries(ds3);
+    //myPlot.addDataSeries(ds2);
+    //myPlot.addDataSeries(ds3);
     myPlot.addDataSeries(ds4);
-    myPlot.setRealTime(15000);
-    var r = 1;
-    $('input').click(function(e) {  
-        if(r == 1) {
-            myPlot.unsetRealTime();
-            r = 0;
-        } else {
-            r = 1;
-            myPlot.setRealTime(15000);
-        }
-    });
-    myPlot.doPlot();
+    //myPlot.setRealTime(15000);
+    //var r = 1;
+    //$('input').click(function(e) {  
+    //    if(r == 1) {
+    //        myPlot.unsetRealTime();
+    //        r = 0;
+    //    } else {
+    //        r = 1;
+    //        myPlot.setRealTime(15000);
+    //    }
+    //});
+    //myPlot.doPlot();
     //console.log(myPlot.data);
+    myPlot.plotOnce();
 });
 </script>
 
