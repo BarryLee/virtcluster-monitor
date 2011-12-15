@@ -29,7 +29,7 @@ def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
         if d_table.has_key(hostId):
             device = d_table[hostId]
         else:
-            rc, hostinfo = rpc_client.getHostInfo(hostId)
+            rc, hostinfo = rpc_client.hostInfo(hostId)
             if rc:
                 device = hostinfo['disks'].keys()[0]
                 d_table[hostId] = device
