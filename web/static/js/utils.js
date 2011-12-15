@@ -198,3 +198,26 @@ function scaleBytes(val, tickDecimals, base, postfix) {
 
 }
 
+function max(iterable) {
+    var v = iterable[0];
+    for (var i = 0; i < iterable.length; i++)
+        if (iterable[i] > v)
+            v = iterable[i];        
+    return v;
+}
+
+function min(iterable) {
+    var v = iterable[0];
+    for (var i = 0; i < iterable.length; i++)
+        if (iterable[i] < v)
+            v = iterable[i];
+    return v
+}
+
+function sum(iterable) {
+    var v = iterable[0];
+    for (var i = 1; i < iterable.length; i++)
+        v += iterable[i];
+    return v;
+}
+
