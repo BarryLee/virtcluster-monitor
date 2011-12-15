@@ -20,71 +20,75 @@ var PerfDataSeries = defineClass({
         this.title = args.title || args.metric;
         this.cf = args.cf;
         this.step = args.step || 1;
-        urlArgs = {
-            host: this.host,
-            metric: this.metric,
-            cf: this.cf,
-            step: this.step
-        }
+        if(!this.rawSeries.label) 
+            this.rawSeries.label = this.title;
         
-        /*
-        * another method to form url (probably works)
-        var url;
-        this.urlTemplate = url = args.urlTemplate;
-        
-        var tempUrl = url, tempArg = '', s = start = end = 0;
-        for(var i = 0; i < url.length; i++) {
-            if(url.charAt(i) == '{') {
-                s = 1;
-                start = i;
-                continue;
-            } else if(url.charAt(i) == '}') {
-                s = 0;
-                end = i;
-                if(urlArgs[tempArg] !== undefined)
-                    tempUrl = tempUrl.substring(0, start) + 
-                                urlArgs[tempArg] +
-                                tempUrl.substring(end + 1);
-                tempArg = '';
-                continue;
-            }
-            if(s == 1) tempArg += url.charAt(i);
-        }
-        url = tempUrl;
-        console.log(url);
-        */
-        
-        var url = args.urlTemplate;
-        var pattern;
-        for(var arg in urlArgs) {
-            if(urlArgs[arg] !== undefined) {
-                pattern = new RegExp('\{' + arg + '\}');
-                url = url.replace(pattern, urlArgs[arg]);
-            }
-        }
-        console.log(url);
-
-        if(url.indexOf('{') != -1) {
-            var splits = url.split('?', 2);
-            url = splits[0];
-            var args = splits[1];
-            if(url.indexOf('{') != -1) 
-                throw new Error('invalid url');
-            argsArr = args.split('&');
-            args = '';
-            for(var i = 0; i < argsArr.length; i++) {
-                if(argsArr[i].indexOf('{') == -1) args += argsArr[i] + '&';
-            }
-            args = args.slice(0, -1);
-            if(args.length) url = url + '?' + args;
-        }
-        console.log(url);
-
-        this.url = url;
-        //TODO: fetch metric title from server
-        if(!this.rawSeries.label) this.rawSeries.label = this.title;
+        if (args.urlTemplate)
+            this.buildUrl(args.urlTemplate);
     },
     methods: {
+        buildUrl: function(urlTemplate) {
+            var urlArgs = {
+                host: this.host,
+                metric: this.metric,
+                cf: this.cf,
+                step: this.step
+            }
+            /*
+            * another method to form url (probably works)
+            var url;
+            this.urlTemplate = url = args.urlTemplate;
+            
+            var tempUrl = url, tempArg = '', s = start = end = 0;
+            for(var i = 0; i < url.length; i++) {
+                if(url.charAt(i) == '{') {
+                    s = 1;
+                    start = i;
+                    continue;
+                } else if(url.charAt(i) == '}') {
+                    s = 0;
+                    end = i;
+                    if(urlArgs[tempArg] !== undefined)
+                        tempUrl = tempUrl.substring(0, start) + 
+                                    urlArgs[tempArg] +
+                                    tempUrl.substring(end + 1);
+                    tempArg = '';
+                    continue;
+                }
+                if(s == 1) tempArg += url.charAt(i);
+            }
+            url = tempUrl;
+            console.log(url);
+            */
+            var url = urlTemplate;
+            var pattern;
+            for(var arg in urlArgs) {
+                if(urlArgs[arg] !== undefined) {
+                    pattern = new RegExp('\{' + arg + '\}');
+                    url = url.replace(pattern, urlArgs[arg]);
+                }
+            }
+            console.log(url);
+
+            if(url.indexOf('{') != -1) {
+                var splits = url.split('?', 2);
+                url = splits[0];
+                var args = splits[1];
+                if(url.indexOf('{') != -1) 
+                    throw new Error('invalid url');
+                argsArr = args.split('&');
+                args = '';
+                for(var i = 0; i < argsArr.length; i++) {
+                    if(argsArr[i].indexOf('{') == -1) args += argsArr[i] + '&';
+                }
+                args = args.slice(0, -1);
+                if(args.length) url = url + '?' + args;
+            }
+            console.log(url);
+
+            this.url = url;
+        },
+
         setUrlArg: function(argName, argValue) {
             var i = this.url.indexOf(argName);
             if(i != -1) {
@@ -108,24 +112,31 @@ var PerfChart = defineClass({
     construct: function(args) {
         this.step = args.step;
         if(args.maxRange === undefined) {
-            var maxRange;
-            if(this.step <= 60) 
-                maxRange = 3600;
-            else if(this.step <= 600)
-                maxRange = 3600 * 24;
-            else if(this.step <= 3600)
-                maxRange = 3600 * 24 * 3;
-            else maxRange = 0;
+            //var maxRange;
+            //if(this.step <= 60) 
+                //maxRange = 3600;
+            //else if(this.step <= 600)
+                //maxRange = 3600 * 24;
+            //else if(this.step <= 3600)
+                //maxRange = 3600 * 24 * 3;
+            //else maxRange = 0;
+            var maxRange = this.step * 60;
             // overwrite the args
             args.maxRange = maxRange;
         }
+
+        this.urlTemplate = args.urlTemplate;
 
         this.yaxes = {};
         PlotWrapper.call(this, args);
         
         this.setOptions({
             xaxis: {
-                tickFormatter: timeFormatter(this.step)
+                tickFormatter: timeFormatter(this.step),
+                tickSize: this.maxRange / 6,
+                //mode: "time",
+                //twelveHourClock: false
+                //show: true
             }
         });
 
@@ -238,6 +249,7 @@ var PerfChart = defineClass({
         },
 
         addMetric: function(metricAttr) {
+            metricAttr.urlTemplate = metricAttr.urlTemplate || this.urlTemplate;
             var dataSeries = new PerfDataSeries(metricAttr);
             return this.addDataSeries(dataSeries);
         },

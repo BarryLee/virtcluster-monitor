@@ -63,53 +63,52 @@ $(function() {
             urlTemplate: urlTemplate
     });
     var ds5 = new PerfDataSeries({
-            name: 'rps',
             host: '007',
-            metric: 'rps', 
-            title: 'reads/s',
+            metric: 'load_five', 
+            title: 'load five',
             urlTemplate: urlTemplate
     });
 
     var myPlot = new PerfChart({
         placeholder: '#placeholder',
         data: [ds1, ds5],
-        //maxRange: 3600 
+        maxRange: 15*120,
         step: 15,
+        urlTemplate: urlTemplate,
         metrics: [
             {
                 host: '007',
                 metric: 'bytes_in', 
                 title: 'bytes in',
                 unit: 'B/s',
-                urlTemplate: urlTemplate
             },
             {
                 host: '007',
                 metric: 'bytes_out', 
                 title: 'bytes out',
                 unit: 'B/s',
-                urlTemplate: urlTemplate
             }
-        ]
-        //options: {
+        ],
+        options: {
         //    lines: { show: true },
         //    points: { show: true }
-        //}
+            //xaxis: { tickLength: 0 }
+        }
     });
     //myPlot.addDataSeries(ds2);
     //myPlot.addDataSeries(ds3);
     myPlot.addDataSeries(ds4);
     //myPlot.setRealTime(15000);
-    //var r = 1;
-    //$('input').click(function(e) {  
-    //    if(r == 1) {
-    //        myPlot.unsetRealTime();
-    //        r = 0;
-    //    } else {
-    //        r = 1;
-    //        myPlot.setRealTime(15000);
-    //    }
-    //});
+    var r = 1;
+    $('input').click(function(e) {  
+        if(r == 1) {
+            myPlot.unsetRealTime();
+            r = 0;
+        } else {
+            r = 1;
+            myPlot.setRealTime(15000);
+        }
+    });
     //myPlot.doPlot();
     //console.log(myPlot.data);
     myPlot.plotOnce();

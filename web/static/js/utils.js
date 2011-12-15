@@ -152,7 +152,8 @@ function timeFormatter(step) {
         var time;
         if(step < 60) {
             //time = theDate.toLocaleTimeString();
-            time = theDate.toTimeString().split(' ')[0];
+            //time = theDate.toTimeString().split(' ')[0];
+            time = theDate.toTimeString().split(' ')[0].slice(0, -3);
         } else if(step < 3600) {
             //time = theDate.toLocaleTimeString().slice(0, -3);
             time = theDate.toTimeString().split(' ')[0].slice(0, -3);
