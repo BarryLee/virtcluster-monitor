@@ -269,7 +269,7 @@ remove it from session""" % (host_obj.id, ip, timeout))
             if now - host.last_arrival > expire_time:
                 if host_type == 'VM':
                     # vm is still alive, only not sending
-                    if VIM.get_vms_info(hid) is not None:
+                    if VIM.get_vm_info(hid) is not None:
                         continue
                 toberemoved.append(hid)
 
