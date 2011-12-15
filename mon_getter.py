@@ -10,13 +10,17 @@ def tojson(func):
         return json.dumps(func(*args, **kwargs))
     return f
 
-_nojson = ['get_stats']
+_moretweak = ['get_stats']
 
 for fn in mon.__all__:
     f = getattr(mon, fn)
-    if fn not in _nojson:
+    if fn not in _moretweak:
         f = tojson(f)
-    setattr(current_module, fn, f)
+        setattr(current_module, fn, f)
 
 __all__ = [fn for fn in mon.__all__]
+
+def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
+                   startTime=None, endTime=None):
+    return mon.get_stats(hostId, metricName, stat, step, startTime, endTime)[1]
 

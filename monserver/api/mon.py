@@ -36,8 +36,8 @@ def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
             else:
                 raise Exception, hostinfo
 
-    return [i for i in rrd_handler.read(hostId, device, metricName, stat, step, \
-                        startTime, endTime)[1] if i[1] is not None]
+    return rrd_handler.read(hostId, device, metricName, stat, step, \
+                        startTime, endTime)
 
 def get_host_state(hostId):
     assert type(hostId) is str

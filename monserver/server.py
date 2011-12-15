@@ -140,7 +140,7 @@ class MonServer(object):
     def get_stats(self, hostId, metricName, stat='AVERAGE', step=15,
                   startTime=None, endTime=None):
         from api.mon import get_stats
-        return get_stats(hostId, metricName, stat, step, startTime, endTime)
+        return get_stats(hostId, metricName, stat, step, startTime, endTime)[1]
 
 def bring_up_all_agents():
     interface = Interface()

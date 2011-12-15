@@ -7,7 +7,7 @@ from exceptions import VIMException
 logger = logging.getLogger('monserver.VIM.crane')
 
 def get_vms_info():
-    state, vmsinfo = cloud.get_vms_info()
+    state, vmsinfo = cloud.get_vms_info(-2, 0)
     if not state:
         raise VIMException, '%s' % ([state, vmsinfo])
     return vmsinfo
@@ -20,7 +20,7 @@ def get_vm_info(vmid):
     return None
 
 def getvminfobyip(ip):
-    suc, vmsinfo = cloud.get_vms_info()
+    suc, vmsinfo = cloud.get_vms_info(-2, 0)
     if not suc:
         logger.error('call vim error: %s' % vmsinfo)
         return None
