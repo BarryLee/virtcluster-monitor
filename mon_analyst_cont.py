@@ -215,7 +215,9 @@ class Analyst(object):
         return ret
 
     def _get_metrics(self, vmid):
-        metric_grps = get_metric_list(vmid)
+        rc, metric_grps = get_metric_list(vmid)
+        if not rc:
+            raise AnalystException, 'cannot get metric list of %s' % vmid
         mlist = []
         processed = set()
         for grp, grpmetrics in metric_grps.items():

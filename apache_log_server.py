@@ -76,7 +76,9 @@ class ApacheLogServer(UDPServer):
         fp = self.log4ip.get(client_ip)
         if fp is None or not os.path.exists(fp.name):
             try:
-                client_id = mon_getter.get_id_by_ip(client_ip)
+                rc, client_id = mon_getter.get_id_by_ip(client_ip)
+                if not rc:
+                    client_id = client_ip
                 fname = self.log_dir + '/' + '_'.join([client_id, 'access_log'])
                 fp = self.log4ip[client_ip] = open(fname, 'a+')
                 print '%s: create file at %s for client %s' % (time.ctime(), fname, client_id)
