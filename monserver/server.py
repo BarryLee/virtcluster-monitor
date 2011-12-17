@@ -69,6 +69,9 @@ class MonServer(object):
             interface.close()
 
     @rpc_formalize()
+    def getIDByIP(self, ip):
+        return getidbyip(ip)
+
     def hostState(self, hostID):
         interface = Interface()
         try:

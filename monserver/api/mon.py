@@ -56,6 +56,9 @@ def get_metric_list(hostId):
 def get_active_hosts():
     return rpc_client.activeHosts()
 
+def get_id_by_ip(ip):
+    return rpc_client.getIDByIP(ip)
+
 #def add_threshold(hostIds, tid):
     #return rpc_client.addThreshold(hostIds, tid)
 

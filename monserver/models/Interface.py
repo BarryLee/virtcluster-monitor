@@ -27,6 +27,10 @@ logger = get_logger("models.interface")
 
 cur_dir = _(__file__)
 
+__all__ = ['register', 'host_metric_conf', 
+           'host_metric_list', 'check_alive',
+           'check_expire', 'getidbyip',
+           'get_active_hosts', 'Interface']
 
 def register(ip, info):
     interface = Interface()
@@ -62,7 +66,7 @@ def check_expire(expire_time):
 
 def getidbyip(ip):
     interface = Interface()
-    ret = interface.getActiveHost(ip)
+    ret = interface.getIDByIP(ip)
     interface.close()
     return ret
     
