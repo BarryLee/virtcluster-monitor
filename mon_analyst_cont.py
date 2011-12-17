@@ -127,7 +127,7 @@ class Analyst(object):
         self.RT_pct_threshold = config.get('RT_pct_threshold', 0.01)
         self._time_to_flush = config.get('time_to_flush', 5)
         self.include_pm = config.get('include_pm', 0)
-        self.excluded_metrics = excluded_metrics.extends(config.get('excluded_metrics', []))
+        self.excluded_metrics = excluded_metrics.extend(config.get('excluded_metrics', []))
 
         # config for learner
         self.classifier_type = config.get('classifier_type', 'TAN')
