@@ -430,7 +430,7 @@ class Analyst(object):
         for metric_buf, (hid, metric) in izip(self.perf_data_buf, self.metrics):
             metric = metric['name']
             try:
-                rdata = get_stats(hid, metric, step=step, startTime=start, endTime=end)
+                rdata = get_stats(hid, metric, step=step, startTime=start, endTime=end)[1]
                 rsz = len(rdata)
                 i = 0
                 if len(metric_buf):
