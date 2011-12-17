@@ -11,8 +11,10 @@ disk_metrics = ['rps','wps','rrqmps','wrqmps','rsecps','wsecps',
                 'rkBps','wkBps','util','await','avgrq_sz','avgqu_sz'] 
 d_table = {}
 
-__all__ = ['get_stats', 'get_host_state', 'get_host_info', 
-           'get_host_list', 'get_metric_list', 'get_active_hosts']
+__all__ = ['get_stats', 'get_host_state', 
+           'get_host_info', 'get_host_list', 
+           'get_metric_list', 'get_active_hosts',
+           'get_id_by_ip']
 
 def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
                    startTime=None, endTime=None):
