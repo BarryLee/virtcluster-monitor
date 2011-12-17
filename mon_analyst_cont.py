@@ -127,6 +127,7 @@ class Analyst(object):
         self.RT_pct_threshold = config.get('RT_pct_threshold', 0.01)
         self._time_to_flush = config.get('time_to_flush', 5)
         self.include_pm = config.get('include_pm', 0)
+        self.excluded_metrics = excluded_metrics.extends(config.get('excluded_metrics', []))
 
         # config for learner
         self.classifier_type = config.get('classifier_type', 'TAN')
@@ -225,7 +226,7 @@ class Analyst(object):
                 m = copy.deepcopy(m)
                 mname = m['name'].split('-')[-1]
                 if m['enabled'] and \
-                        mname not in excluded_metrics and\
+                        mname not in self.excluded_metrics and\
                         mname not in processed:
                     #mlist.append(m['name'])
                     processed.add(mname)
