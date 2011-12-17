@@ -5,7 +5,7 @@ import threading
 import time
 from SocketServer import UDPServer, BaseRequestHandler
 
-import mon_getter
+from monserver.api.mon import get_id_by_ip
 
 BUFSZ = 2*1024**3
 
@@ -76,7 +76,7 @@ class ApacheLogServer(UDPServer):
         fp = self.log4ip.get(client_ip)
         if fp is None or not os.path.exists(fp.name):
             try:
-                rc, client_id = mon_getter.get_id_by_ip(client_ip)
+                rc, client_id = get_id_by_ip(client_ip)
                 if not rc:
                     client_id = client_ip
                 fname = self.log_dir + '/' + '_'.join([client_id, 'access_log'])
