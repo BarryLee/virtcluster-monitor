@@ -20,14 +20,14 @@ def host_id(ip):
     return hostname
 
 def vm_id(ip):
-    """Get vm' id from VIM, otherwise use its ip.
+    """Get vm' id from VIM, otherwise use its hostname.
     """
     vmid = VIM.getvmidbyip(ip)
     if vmid is not None:
         return vmid
     else:
         logger.info('unmanaged vm %s' % ip)
-        return ip
+        return host_id(ip)
 
 def get_id(hostobj):
     if isinstance(hostobj, resources.VM):

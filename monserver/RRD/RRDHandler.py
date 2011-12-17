@@ -159,7 +159,7 @@ class RRDHandler(Singleton):
             max = metric.has_key("max") and str(metric["max"]) or "U"
             min = metric.has_key("min") and str(metric["min"]) or "U"
             xff = 0.5
-            ttl = 3600 * 24
+            ttl = 3600 * 24 * 5
             cf_time = metric_group["consolidation_intervals"]
             DSs = [[metric_name, ds_type, heartbeat, min, max]]
             RRAs = []
