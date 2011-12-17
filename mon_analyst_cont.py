@@ -231,6 +231,7 @@ class Analyst(object):
                     processed.add(mname)
                     del m['enabled']
                     if m.has_key('unit') and m['unit'] is None: del m['unit']
+                    m['name'] = mname
                     mlist.append(m)
 
         #logger.debug(mlist)
