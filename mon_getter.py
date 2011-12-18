@@ -22,5 +22,9 @@ __all__ = [fn for fn in mon.__all__]
 
 def get_stats(hostId, metricName, stat="AVERAGE", step=15, \
                    startTime=None, endTime=None):
+    if startTime is not None:
+        startTime = int(startTime)
+    if endTime is not None:
+        endTime = int(endTime)
     return mon.get_stats(hostId, metricName, stat, step, startTime, endTime)[1]
 
