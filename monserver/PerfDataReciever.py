@@ -39,16 +39,26 @@ class DRRequestHandler(BaseRequestHandler):
             #logger.debug(list(self.model_int.session.root.get("active", {}).keys()))
             host_obj = self.model_int.getActiveHost(ip)
             host_id = host_obj.id
-            host_obj.last_arrival = time.time()
+            now = time.time()
+            if now - host_obj.last_arrival > self.server.update_interval:
+                host_obj.last_arrival = now
+                try:
+                    self.model_int.commit()
+                except ModelDBException, e:
+                    #logger.exception('')
+                    if e.errno == 2:
+                        pass
+                    else:
+                        logger.exception('')
+            # end if
             try:
-                self.model_int.commit()
                 self.model_int.close()
             except ModelDBException, e:
-                #logger.exception('')
-                if e.errno in (2, 3):
+                if e.errno == 3:
                     pass
                 else:
                     logger.exception('')
+
             data = decode(data)
             for evt in self.produceEvent(host_id, data):
                 send_event(evt)
@@ -97,12 +107,14 @@ class DataReciever(ThreadingUDPServer):
 
     def __init__(self, server_address, data_store_handler, 
                  #event_server_address,
+                 check_alive_interval,
                  RequestHandlerClass=DRRequestHandler,
                  bind_and_activate=True):
         ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
         self.data_store_handler = data_store_handler
         #self.event_server_address = event_server_address
         #self.model_int = Interface()
+        self.update_interval = check_alive_interval / 2
 
 
     def verify_request(self, request, client_address):

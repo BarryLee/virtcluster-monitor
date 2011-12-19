@@ -13,7 +13,7 @@ if par_dir not in sys.path:
     sys.path.append(par_dir)
 ###############################################################
 
-from ModelDB import ModelDB, ModelDBSession, ModelDBException
+from ModelDB import ModelDB, ModelDBSession, ModelDBException, packdb
 from resources import Host, VM, CPU, Disk, Partition, NetworkInterface
 import ID
 from utils.utils import decode
@@ -30,7 +30,8 @@ cur_dir = _(__file__)
 __all__ = ['register', 'host_metric_conf', 
            'host_metric_list', 'check_alive',
            'check_expire', 'getidbyip',
-           'get_active_hosts', 'Interface']
+           'get_active_hosts', 'Interface',
+           'pack_model_db', 'ModelDBException']
 
 def register(ip, info):
     interface = Interface()
@@ -77,6 +78,8 @@ def get_active_hosts():
     interface.close()
     return ret
 
+def pack_model_db():
+    packdb()
 
 class Interface(object):
 

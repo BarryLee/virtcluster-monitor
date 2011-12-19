@@ -68,3 +68,5 @@ espfile = '/tmp/monevent.pid'
 event_db_conf = 'event/eventstore.conf'
 
 threshold_db_conf = 'threshold/thresholdstore.conf'
+
+pack_db_interval = 24 * 3600
