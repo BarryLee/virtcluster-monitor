@@ -60,8 +60,9 @@ class MonServer(object):
     def activeHosts(self):
         interface = Interface()
         try:
-            active_hosts = map(lambda x: (x[1].id, x[0]), 
-                            interface.getActiveHosts().items())
+            #active_hosts = map(lambda x: (x[1].id, x[0]), 
+                            #interface.getActiveHosts().items())
+            active_hosts = [(h.id, h.ip) for h in interface.getActiveHosts()]
             return active_hosts
         except Exception:
             raise
@@ -77,19 +78,16 @@ class MonServer(object):
         interface = Interface()
         try:
             hostobj = interface.getHost(hostID)
+            if hostobj.state:
+                return "active"
+            else:
+                return "inactive"
         except ModelDBException, e:
-            interface.close()
             if e.errno == 1:
                 raise Exception, '%s is not registered' % hostID
             else:
                 logger.exception('')
                 raise
-        try:
-            interface.getActiveHost(hostobj.ip)
-            return "active"
-        except ModelDBException, e:
-            if e.errno == 1:
-                return "inactive"
         finally:
             interface.close()
 
@@ -147,33 +145,32 @@ class MonServer(object):
         return get_stats(hostId, metricName, stat, step, startTime, endTime)[1]
 
 def bring_up_all_agents():
-    interface = Interface()
-    try:
-        active_hosts = interface.getActiveHosts()
-    except ModelDBException, e:
-        interface.close()
-        if e.errno == 1:
-            return
-        else: 
-            raise
-
     default_port = global_config.get('agent_port')
+    addrs = []
+    try:
+        interface = Interface()
+        for hid, hostobj in interface.session.getResource('all').iteritems():
+            try:
+                if hasattr(hostobj, 'port'):
+                    port = hostobj.port
+                else:
+                    port = default_port
+                addrs.append((hostobj.ip, port))
+            except Exception, e:
+                logger.exception('')
+                continue
+    except Exception, e:
+        logger.exception('')
+    finally:
+        interface.close()
 
-    for ip, hostobj in active_hosts.iteritems():
-        #pdb.set_trace()
-        if hasattr(hostobj, 'port'):
-            port = hostobj.port
-            #logger.debug(port)
-        else:
-            port = default_port
+    for addr in addrs:
         try:
-            c = xmlrpclib.ServerProxy('http://%s:%s' % (ip, port))
+            c = xmlrpclib.ServerProxy('http://%s:%s' % addr)
             c.restart()
         except socket.error, e:
             logger.debug(e)
             continue
-
-    interface.close()
 
 def main():
 

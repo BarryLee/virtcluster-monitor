@@ -30,8 +30,8 @@ cur_dir = _(__file__)
 __all__ = ['register', 'host_metric_conf', 
            'host_metric_list', 'check_alive',
            'check_expire', 'getidbyip',
-           'get_active_hosts', 'Interface',
-           'pack_model_db', 'ModelDBException']
+           'Interface','pack_model_db', 
+           'ModelDBException']
 
 def register(ip, info):
     interface = Interface()
@@ -71,12 +71,6 @@ def getidbyip(ip):
     interface.close()
     return ret
     
-
-def get_active_hosts():
-    interface = Interface()
-    ret = interface.getActiveHosts()
-    interface.close()
-    return ret
 
 def pack_model_db():
     packdb()
@@ -175,6 +169,7 @@ class Interface(object):
             host.port = info['port']
 
         host.last_arrival = time.time()
+        host.state = 1
 
         self.session.addResource("all", host.id, host)
         self.session.addResource(host.__class__.__name__, host.id, host)
@@ -210,18 +205,19 @@ class Interface(object):
                 mgrp.extend(metrics)
         return metric_grps
 
-    def getActiveHost(self, ip):
+    def getHostByIP(self, ip):
         session = self.session
         host_obj = session.getResource("active", ip)
         return host_obj
 
 
     def getActiveHosts(self):
-        return self.session.getResource("active")
+        return (h for ip, h in self.session.getResource("active").items() \
+                if h.state == 1)
 
 
     def getIDByIP(self, ip):
-        return self.getActiveHost(ip).id
+        return self.getHostByIP(ip).id
 
     
     def checkAlive(self, timeout):
@@ -233,21 +229,17 @@ class Interface(object):
         #logger.debug(list(self.session.root.get("all", {}).keys()))
         #logger.debug(list(self.session.root.get("Host", {}).keys()))
         now = time.time()
-        toberemoved = []
-        for ip, host_obj in active_hosts.iteritems():
+        for host_obj in active_hosts:
             #logger.debug("%d, %d, %d" % (now, host_obj.last_arrival, timeout))
             if now - host_obj.last_arrival > timeout:
-                toberemoved.append(ip)
-        if len(toberemoved):
-            for ip in toberemoved:
-                host_obj = active_hosts.pop(ip)
+                host_obj.state = 0
                 logger.warning("""no msg from %s(%s) for more than %d seconds,\
-remove it from session""" % (host_obj.id, ip, timeout))
+mark it as inactive""" % (host_obj.id, host_obj.ip, timeout))
                 #send_event(HostInactive(host_obj.id, ip=ip))
                 send_event({
                             'eventType': 'HostInactive',
                             'hostId': host_obj.id,
-                            'ip': ip
+                            'ip': host_obj.ip
                            })
             self.session.commit()                           
 
@@ -257,8 +249,26 @@ remove it from session""" % (host_obj.id, ip, timeout))
         #hostobj = self.getHost(host_id)
         #for tid in hostobj.thresholds:
             #unset_threshold(tid)
+        cnt = 5
+        while cnt:
+            try:
+                host_obj = self.getHost(host_id)
+                break
+            except ModelDBSession, e:
+                if e.errno == 1:
+                    raise
+                else:
+                    logger.exception('')
+                    cnt -= 1
+                    sleep(0.01)
+                    continue
+        if not cnt > 0:
+            raise Exception, 'del host %s failed' % host_id
+
+        ip = host_obj.ip
         self.session.delResource(host_type, host_id)
         self.session.delResource("all", host_id)
+        self.session.delResource("active", ip)
         self.session.commit()
         send_event({
                     'eventType': 'HostDel',

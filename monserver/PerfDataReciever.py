@@ -37,11 +37,13 @@ class DRRequestHandler(BaseRequestHandler):
         ip = self.client_address[0]
         try:
             #logger.debug(list(self.model_int.session.root.get("active", {}).keys()))
-            host_obj = self.model_int.getActiveHost(ip)
+            host_obj = self.model_int.getHostByIP(ip)
             host_id = host_obj.id
             now = time.time()
             if now - host_obj.last_arrival > self.server.update_interval:
                 host_obj.last_arrival = now
+                if 0 == host_obj.state:
+                    host_obj.state = 1
                 try:
                     self.model_int.commit()
                 except ModelDBException, e:
