@@ -221,9 +221,7 @@ class Interface(object):
 
     
     def checkAlive(self, timeout):
-        active_hosts = self.session.root.get("active", None)
-        if active_hosts is None:
-            return
+        active_hosts = self.getActiveHosts()
         #active_hosts = self.session.root.get("active", {})
         #logger.debug(list(active_hosts.keys())) 
         #logger.debug(list(self.session.root.get("all", {}).keys()))
