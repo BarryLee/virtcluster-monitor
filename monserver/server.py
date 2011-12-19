@@ -197,14 +197,14 @@ def main():
     #es_port = global_config.get("es_port")
     #data_server = DataReciever((local_host, ds_port), rrd_handler,\
                                #(local_host, es_port))
-    check_alive_interval = global_config.get("check_alive_interval")
-    data_server = DataReciever((local_host, ds_port), rrd_handler, check_alive_interval)
+    agent_timeout = global_config.get("agent_timeout")
+    data_server = DataReciever((local_host, ds_port), rrd_handler, agent_timeout)
     threadinglize(data_server.serve_forever, "data_server")()
     logger.info("start data server on %s:%d" % (local_host, ds_port))
 
     bring_up_all_agents()
 
-    agent_timeout = global_config.get("agent_timeout")
+    check_alive_interval = global_config.get("check_alive_interval")
     scheduled_task(check_alive, "check_alive", True,
                    0, -1, check_alive_interval)(agent_timeout)
     logger.info("check_alive started...")

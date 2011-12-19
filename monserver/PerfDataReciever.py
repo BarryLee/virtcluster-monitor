@@ -107,14 +107,14 @@ class DataReciever(ThreadingUDPServer):
 
     def __init__(self, server_address, data_store_handler, 
                  #event_server_address,
-                 check_alive_interval,
+                 agent_timeout,
                  RequestHandlerClass=DRRequestHandler,
                  bind_and_activate=True):
         ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
         self.data_store_handler = data_store_handler
         #self.event_server_address = event_server_address
         #self.model_int = Interface()
-        self.update_interval = check_alive_interval / 2
+        self.update_interval = agent_timeout / 2
 
 
     def verify_request(self, request, client_address):
