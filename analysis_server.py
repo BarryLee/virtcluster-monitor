@@ -220,7 +220,7 @@ class AnalystManager(threading.Thread):
                     # (*o*)
                     analyst.im_result_details.append(res[2:-1])
                 # (*o*)
-                self.log_im_result(analyst, res)
+                #self.log_im_result(analyst, res)
                 if analyst.get_state() != AnalystState.running:
                     break
             if analyst.get_state() != AnalystState.stopped:
