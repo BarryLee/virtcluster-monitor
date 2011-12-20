@@ -3,7 +3,7 @@
 DIR_PATH=$(cd "$(dirname "$0")"; pwd)
 #echo $DIR_PATH
 SERVER="serverd"
-EVENT_SERVER="event_serverd"
+#EVENT_SERVER="event_serverd"
 #PYTHON="python2.6"
 
 USAGE="Usage: "$0" start|stop|restart"
@@ -52,18 +52,18 @@ ACTION="$1"
 
 if [ "$ACTION" = "start" ]
 then
-    _start $EVENT_SERVER
+    #_start $EVENT_SERVER
     _start $SERVER
 elif [ "$ACTION" = "stop" ]
 then
     _stop $SERVER
-    _stop $EVENT_SERVER
+    #_stop $EVENT_SERVER
 elif [ "$ACTION" = "restart" ]
 then
     _stop $SERVER
-    _stop $EVENT_SERVER
+    #_stop $EVENT_SERVER
     sleep 2
-    _start $EVENT_SERVER
+    #_start $EVENT_SERVER
     _start $SERVER
 else
     _error

@@ -7,19 +7,19 @@ import logging
 
 from models.Interface import Interface, ModelDBException
 from utils.utils import decode
-from api.event import send_event
-from event.Event import Event
+#from api.event import send_event
+#from event.Event import Event
 
 #logger = get_logger('PerfDateReciever')
 logger = logging.getLogger('PerfDateReciever')
 
-class PerfDataArrival(Event):
+#class PerfDataArrival(Event):
 
-    def __init__(self, occurTime, host, metric, val):
-        super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occurTime)
-        self.metric = metric
-        self.val = val
-        #self.detectTime = int(time.time()*1e6)
+    #def __init__(self, occurTime, host, metric, val):
+        #super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occurTime)
+        #self.metric = metric
+        #self.val = val
+        ##self.detectTime = int(time.time()*1e6)
 
 class DRRequestHandler(BaseRequestHandler):
 
@@ -37,21 +37,33 @@ class DRRequestHandler(BaseRequestHandler):
         ip = self.client_address[0]
         try:
             #logger.debug(list(self.model_int.session.root.get("active", {}).keys()))
-            host_obj = self.model_int.getActiveHost(ip)
+            host_obj = self.model_int.getHostByIP(ip)
             host_id = host_obj.id
-            host_obj.last_arrival = time.time()
+            now = time.time()
+            if now - host_obj.last_arrival > self.server.update_interval:
+                host_obj.last_arrival = now
+                if 0 == host_obj.state:
+                    host_obj.state = 1
+                try:
+                    self.model_int.commit()
+                except ModelDBException, e:
+                    #logger.exception('')
+                    if e.errno == 2:
+                        pass
+                    else:
+                        logger.exception('')
+            # end if
             try:
-                self.model_int.commit()
                 self.model_int.close()
             except ModelDBException, e:
-                #logger.exception('')
-                if e.errno in (2, 3):
+                if e.errno == 3:
                     pass
                 else:
                     logger.exception('')
+
             data = decode(data)
-            for evt in self.produceEvent(host_id, data):
-                send_event(evt)
+            #for evt in self.produceEvent(host_id, data):
+                #send_event(evt)
             self.data_store_handler.onDataArrival(host_id, data)
         except KeyError, e:
             # TODO 
@@ -97,12 +109,14 @@ class DataReciever(ThreadingUDPServer):
 
     def __init__(self, server_address, data_store_handler, 
                  #event_server_address,
+                 agent_timeout,
                  RequestHandlerClass=DRRequestHandler,
                  bind_and_activate=True):
         ThreadingUDPServer.__init__(self, server_address, RequestHandlerClass)
         self.data_store_handler = data_store_handler
         #self.event_server_address = event_server_address
         #self.model_int = Interface()
+        self.update_interval = agent_timeout / 2
 
 
     def verify_request(self, request, client_address):

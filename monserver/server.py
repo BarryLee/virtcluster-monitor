@@ -60,8 +60,9 @@ class MonServer(object):
     def activeHosts(self):
         interface = Interface()
         try:
-            active_hosts = map(lambda x: (x[1].id, x[0]), 
-                            interface.getActiveHosts().items())
+            #active_hosts = map(lambda x: (x[1].id, x[0]), 
+                            #interface.getActiveHosts().items())
+            active_hosts = [(h.id, h.ip) for h in interface.getActiveHosts()]
             return active_hosts
         except Exception:
             raise
@@ -72,23 +73,21 @@ class MonServer(object):
     def getIDByIP(self, ip):
         return getidbyip(ip)
 
+    @rpc_formalize()
     def hostState(self, hostID):
         interface = Interface()
         try:
             hostobj = interface.getHost(hostID)
+            if hostobj.state:
+                return "active"
+            else:
+                return "inactive"
         except ModelDBException, e:
-            interface.close()
             if e.errno == 1:
                 raise Exception, '%s is not registered' % hostID
             else:
                 logger.exception('')
                 raise
-        try:
-            interface.getActiveHost(hostobj.ip)
-            return "active"
-        except ModelDBException, e:
-            if e.errno == 1:
-                return "inactive"
         finally:
             interface.close()
 
@@ -146,33 +145,32 @@ class MonServer(object):
         return get_stats(hostId, metricName, stat, step, startTime, endTime)[1]
 
 def bring_up_all_agents():
-    interface = Interface()
-    try:
-        active_hosts = interface.getActiveHosts()
-    except ModelDBException, e:
-        interface.close()
-        if e.errno == 1:
-            return
-        else: 
-            raise
-
     default_port = global_config.get('agent_port')
+    addrs = []
+    try:
+        interface = Interface()
+        for hid, hostobj in interface.session.getResource('all').iteritems():
+            try:
+                if hasattr(hostobj, 'port'):
+                    port = hostobj.port
+                else:
+                    port = default_port
+                addrs.append((hostobj.ip, port))
+            except Exception, e:
+                logger.exception('')
+                continue
+    except Exception, e:
+        logger.exception('')
+    finally:
+        interface.close()
 
-    for ip, hostobj in active_hosts.iteritems():
-        #pdb.set_trace()
-        if hasattr(hostobj, 'port'):
-            port = hostobj.port
-            #logger.debug(port)
-        else:
-            port = default_port
+    for addr in addrs:
         try:
-            c = xmlrpclib.ServerProxy('http://%s:%s' % (ip, port))
+            c = xmlrpclib.ServerProxy('http://%s:%s' % addr)
             c.restart()
         except socket.error, e:
             logger.debug(e)
             continue
-
-    interface.close()
 
 def main():
 
@@ -196,13 +194,13 @@ def main():
     #es_port = global_config.get("es_port")
     #data_server = DataReciever((local_host, ds_port), rrd_handler,\
                                #(local_host, es_port))
-    data_server = DataReciever((local_host, ds_port), rrd_handler)
+    agent_timeout = global_config.get("agent_timeout")
+    data_server = DataReciever((local_host, ds_port), rrd_handler, agent_timeout)
     threadinglize(data_server.serve_forever, "data_server")()
     logger.info("start data server on %s:%d" % (local_host, ds_port))
 
     bring_up_all_agents()
 
-    agent_timeout = global_config.get("agent_timeout")
     check_alive_interval = global_config.get("check_alive_interval")
     scheduled_task(check_alive, "check_alive", True,
                    0, -1, check_alive_interval)(agent_timeout)
@@ -213,6 +211,11 @@ def main():
     scheduled_task(check_expire, "check_expire", True,
                    0, -1, check_expire_interval)(expire_time)
     logger.info("check_expire started...")
+
+    pack_db_interval = global_config.get('pack_db_interval', 24*3600)
+    scheduled_task(pack_model_db, "pack_model_db", True,
+                   pack_db_interval, -1, pack_db_interval)()
+    logger.info("packdb started...")
 
     from signal import signal, SIGTERM
 

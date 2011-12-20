@@ -127,8 +127,11 @@ def scheduled_task(procedure, tname=None, isdaemon=True,
     def schedule(*args_, **kwargs_):
         def do_task(*args, **kwargs):
             loop_counter = loop_time
-            while loop_time == -1 or loop_counter >= 0:
-                procedure(*args_, **kwargs_)
+            while loop_time == -1 or loop_counter > 0:
+                try:
+                    procedure(*args_, **kwargs_)
+                except Exception, e:
+                    logger.exception('')
                 loop_counter -= 1
                 if loop_interval > 0:
                     time.sleep(loop_interval)

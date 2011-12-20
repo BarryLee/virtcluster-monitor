@@ -1,3 +1,5 @@
+import logging
+
 import ZODB.config
 import transaction
 from BTrees.OOBTree import OOBTree
@@ -6,6 +8,7 @@ from ZODB.POSException import ConflictError, ConnectionStateError
 from monserver.includes.singletonmixin import Singleton
 #from utils.utils import put_to_dict
 
+logger = logging.getLogger('models.ModelDB')
 
 class ModelDBException(Exception):
     """errno:
@@ -51,6 +54,7 @@ class ModelDB(Singleton):
 
     def open(self):
         self._db = ZODB.config.databaseFromURL(self._config_url)
+        self.pack()
         conn = self._db.open()
         root = conn.root()
         if not root.has_key("all"):
@@ -63,6 +67,10 @@ class ModelDB(Singleton):
         self._db.close()
         self._opened = 0
 
+    def pack(self):
+        logger.info('packing model db...')
+        self._db.pack()
+        logger.info('done!')
 
 
 class ModelDBSession(object):
@@ -122,3 +130,10 @@ class ModelDBSession(object):
         except ConnectionStateError, e:
             raise ModelDBException(e, 3)
 
+
+def packdb():
+    ModelDB.getInstance().pack()
+
+
+if __name__ == '__main__':
+    packdb()
