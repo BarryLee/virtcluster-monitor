@@ -7,19 +7,19 @@ import logging
 
 from models.Interface import Interface, ModelDBException
 from utils.utils import decode
-from api.event import send_event
-from event.Event import Event
+#from api.event import send_event
+#from event.Event import Event
 
 #logger = get_logger('PerfDateReciever')
 logger = logging.getLogger('PerfDateReciever')
 
-class PerfDataArrival(Event):
+#class PerfDataArrival(Event):
 
-    def __init__(self, occurTime, host, metric, val):
-        super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occurTime)
-        self.metric = metric
-        self.val = val
-        #self.detectTime = int(time.time()*1e6)
+    #def __init__(self, occurTime, host, metric, val):
+        #super(PerfDataArrival, self).__init__(host, 'PerfDataArrival', occurTime)
+        #self.metric = metric
+        #self.val = val
+        ##self.detectTime = int(time.time()*1e6)
 
 class DRRequestHandler(BaseRequestHandler):
 
@@ -62,8 +62,8 @@ class DRRequestHandler(BaseRequestHandler):
                     logger.exception('')
 
             data = decode(data)
-            for evt in self.produceEvent(host_id, data):
-                send_event(evt)
+            #for evt in self.produceEvent(host_id, data):
+                #send_event(evt)
             self.data_store_handler.onDataArrival(host_id, data)
         except KeyError, e:
             # TODO 

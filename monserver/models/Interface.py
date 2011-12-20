@@ -20,7 +20,7 @@ from utils.utils import decode
 from utils.get_logger import get_logger
 from monserver.RRD.cleanup import rmrrds
 from monserver.VIMBroker import VIM
-from monserver.api.event import send_event, unset_threshold
+#from monserver.api.event import send_event, unset_threshold
 #from event_defs import *
 
 logger = get_logger("models.interface")
@@ -234,11 +234,11 @@ class Interface(object):
                 logger.warning("""no msg from %s(%s) for more than %d seconds,\
 mark it as inactive""" % (host_obj.id, host_obj.ip, timeout))
                 #send_event(HostInactive(host_obj.id, ip=ip))
-                send_event({
-                            'eventType': 'HostInactive',
-                            'hostId': host_obj.id,
-                            'ip': host_obj.ip
-                           })
+                #send_event({
+                            #'eventType': 'HostInactive',
+                            #'hostId': host_obj.id,
+                            #'ip': host_obj.ip
+                           #})
             self.session.commit()                           
 
 
@@ -268,10 +268,10 @@ mark it as inactive""" % (host_obj.id, host_obj.ip, timeout))
         self.session.delResource("all", host_id)
         self.session.delResource("active", ip)
         self.session.commit()
-        send_event({
-                    'eventType': 'HostDel',
-                    'hostId': host_id
-                   })
+        #send_event({
+                    #'eventType': 'HostDel',
+                    #'hostId': host_id
+                   #})
 
     def checkExpire(self, host_type, expire_time):
         hosts = self.session.root.get(host_type, None)
