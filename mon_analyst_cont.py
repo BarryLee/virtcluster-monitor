@@ -10,6 +10,7 @@ from pebl.data import Dataset, Variable, DiscreteVariable
 from pebl.cpd_cont import MultivariateCPD, StatsConcrete
 #from pebl.learner.wrapper import WrapperClassifierLearner
 from pebl.learner.wrapper_cont import WrapperClassifierLearner
+#from pebl.learner.wrapper_cont_mp import WrapperClassifierLearner
 #from pebl.learner.tan_classifier2 import TANClassifierLearner
 from pebl.learner.tan_classifier_cont import TANClassifierLearner
 #from pebl.learner.nb_classifier import NBClassifierLearner
@@ -382,10 +383,11 @@ class Analyst(object):
     
     def do_analysis(self):
         if not hasattr(self, 'learner'):
+            st = time.time()
             obs = np.array(self.obs_buf)
             del self.obs_buf[:]
             data = Dataset(obs, None, None, self.variables, None)
-            data.check_arities()
+            #data.check_arities()
             # TODO select learner class
             learner_config = {
                 'score_good_enough': self.score_good_enough,
@@ -399,9 +401,12 @@ class Analyst(object):
             #obs = np.array(self.obs_buf)
             #del self.obs_buf[:]
             #self.learner.addObs(obs)
+            logger.debug('initializing analysis used %s seconds' % \
+                            (time.time() - st))
         else:
             raise AnalystException, 'a learner is already learned!'
         self.preprocess()
+        self.analysis_start_t = time.time()
         return self.learner.run(
                         mute=self.mute, 
                         verbose=self.verbose, 
@@ -520,11 +525,15 @@ class Analyst(object):
             return None
 
     def preprocess(self):
+        st = time.time()
         prohibited_attrs = check(self.learner.stats)
         self.learner.set_prohibited_attrs(prohibited_attrs)
+        logger.debug("preprocess used %s seconds" % (time.time() - st))
         return prohibited_attrs
         
     def finish_analysis(self):
+        logger.debug('analysis used %s seconds' % \
+                        (time.time() - self.analysis_start_t))
         self.selected_learner = self.learner.getSelectedLearner()
         self.attrs_selected = sorted(self.learner.attrs_selected)
         self.classifier = Classifier(self.selected_learner)
