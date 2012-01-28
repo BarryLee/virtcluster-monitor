@@ -33,7 +33,7 @@ pfile = '/tmp/monserver.pid'
 # log path
 #logfile = '/tmp/monserver.log'
 
-# if the server doesn't recieve data from a agent for this long,
+# if the server doesn't receive data from a agent for this long,
 # it considers the agent down. (in seconds)
 # this value must be larger than the whole retry time of agent
 agent_timeout = 45

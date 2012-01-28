@@ -7,6 +7,6 @@
     "class":    ["ThresholdViolation"]
 },
 {
-    "module":   "monserver.PerfDataReciever",
+    "module":   "monserver.PerfDataReceiver",
     "class":    ["PerfDataArrival"]
 }]

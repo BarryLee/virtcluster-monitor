@@ -9,7 +9,7 @@ import xmlrpclib
 from time import sleep
 
 from ThreadingXMLRPCServer import ThreadingXMLRPCServer, get_request_data
-from PerfDataReciever import DataReciever
+from PerfDataReceiver import DataReceiver
 from RRD.RRDHandler import RRDHandler
 from models.Interface import *
 from utils.load_config import load_config
@@ -192,10 +192,10 @@ def main():
     rrd_handler = RRDHandler.getInstance(rrd_root)
     ds_port = global_config.get("ds_port")
     #es_port = global_config.get("es_port")
-    #data_server = DataReciever((local_host, ds_port), rrd_handler,\
+    #data_server = DataReceiver((local_host, ds_port), rrd_handler,\
                                #(local_host, es_port))
     agent_timeout = global_config.get("agent_timeout")
-    data_server = DataReciever((local_host, ds_port), rrd_handler, agent_timeout)
+    data_server = DataReceiver((local_host, ds_port), rrd_handler, agent_timeout)
     threadinglize(data_server.serve_forever, "data_server")()
     logger.info("start data server on %s:%d" % (local_host, ds_port))
 

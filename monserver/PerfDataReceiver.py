@@ -1,4 +1,4 @@
-"""data_reciever.py -- the UDPServer that recieves the monitor
+"""data_receiver.py -- the UDPServer that receives the monitor
 data
 """
 from SocketServer import BaseRequestHandler, ThreadingUDPServer
@@ -10,8 +10,8 @@ from utils.utils import decode
 #from api.event import send_event
 #from event.Event import Event
 
-#logger = get_logger('PerfDateReciever')
-logger = logging.getLogger('PerfDateReciever')
+#logger = get_logger('PerfDateReceiver')
+logger = logging.getLogger('PerfDateReceiver')
 
 #class PerfDataArrival(Event):
 
@@ -31,7 +31,7 @@ class DRRequestHandler(BaseRequestHandler):
 
 
     def handle(self):
-        #logger.debug("recieved 1 msg from %s:%d" % \
+        #logger.debug("received 1 msg from %s:%d" % \
         #             (self.client_address[0], self.client_address[1]))
         data = self.request[0]
         ip = self.client_address[0]
@@ -67,7 +67,7 @@ class DRRequestHandler(BaseRequestHandler):
             self.data_store_handler.onDataArrival(host_id, data)
         except KeyError, e:
             # TODO 
-            #logger.debug('recieved msg from unsigned host %s' % \
+            #logger.debug('received msg from unsigned host %s' % \
                          #(self.client_address,))
             return
         #logger.debug('msg from %s:%d - %s' % (data[1][0], data[1][1], data[0])) 
@@ -105,7 +105,7 @@ class DRRequestHandler(BaseRequestHandler):
                 #raise
 
 
-class DataReciever(ThreadingUDPServer):
+class DataReceiver(ThreadingUDPServer):
 
     def __init__(self, server_address, data_store_handler, 
                  #event_server_address,
